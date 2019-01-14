@@ -7,7 +7,7 @@ function [i]= batchforce
 %% contact point and it requires all force curves to be obtained with a
 %% probe of the same size (though it can be a different cantilever). Also
 %% the cantilevers should be calibrated and only certain headers can be
-%% read.
+%% read. 
 
 % Version 19/1/2016 Max Jakobs; including change in line 125 from 25/01/18 Max and Julia
 
