@@ -7,9 +7,13 @@ function [i]= batchforce
 %% contact point and it requires all force curves to be obtained with a
 %% probe of the same size (though it can be a different cantilever). Also
 %% the cantilevers should be calibrated and only certain headers can be
-%% read. 
+%% read.
 
-% Version 19/1/2016 Max Jakobs; including change in line 125 from 25/01/18 Max and Julia
+% Version 06/12/2018 Julia Becker: Now logging every curve which was
+% analysed. Please amend user name as needed.
+
+%% Change accordingly, please!
+log_user = 'Julia';
 
 %% Select the force curves to be analyzed
 
@@ -23,9 +27,14 @@ if (q == 0)
 end
 
 %% get the necessary inputs
+log_userinput = {};
+
 beadradius = input('Beadradius in nm >');
+log_userinput{1,1} = num2str(beadradius);
 beadradius = beadradius*1E-9;
+
 weight_user_index = input('Should data points at deeper indentations be given more weight[y/n]?\n>>>','s');
+log_userinput{1,2} = weight_user_index;
 if strcmp('y',weight_user_index) == 1
     weight_user_index = 1;
 elseif strcmp('n',weight_user_index) == 1
@@ -33,27 +42,35 @@ elseif strcmp('n',weight_user_index) == 1
 else
     error('no valid input')
 end
+
 specialSelect = input('Select type of analysis:\n(1)  Complete analysis with tabulated output\n(2)  Specific output for one Indentation\n(3)  Specific output for one Force\n(4)  Check fits\n(5)  Residuals\n>>>');
+log_userinput{1,3} = num2str(specialSelect);
+
 if specialSelect == 3
     forceInput = input('To which force in nN do you wish to analyze?>>');
+    log_userinput{1,4} = num2str(forceInput);
     forceInput = forceInput*1E-9;
     indentationInput = 0;
     assumedCP = input('Which contactpoint(index) do you assume? (0 for none)>>');
+    log_userinput{1,5} = num2str(assumedCP);
     if assumedCP == 0
         detailedRun = 0;
     else detailedRun = 1;
     end
 elseif specialSelect == 2
     indentationInput = input('To which indentation in microns do you want to analyze?>>');
+    log_userinput{1,4} = num2str(indentationInput);
     indentationInput = indentationInput*1E-6;
     forceInput = 0;
     assumedCP = input('Which contactpoint(index) do you assume? (0 for none)>>');
+    log_userinput{1,5} = num2str(assumedCP);
     if assumedCP == 0
         detailedRun = 0;
     else detailedRun = 1;
     end
 elseif specialSelect == 1
     resolution = input('Every how many data points should a fit be performed?\nWARNING: A too small value may make the calculation take forever.\nFor a 1000 data point force curves 7 may be reasonable.\nBecause of certain parts of the algorithm the number should be below 20.\n>>>');
+    log_userinput{1,4} = num2str(resolution);
     forceInput = 0;
     indentationInput = 0.03*beadradius;
     assumedCP = 0;
@@ -72,8 +89,10 @@ elseif specialSelect == 4
     assumedCP = 0;
     detailedRun = 0;
     intervals = input('For which indentations do you want to see fits?\nType ''[indentation1 indentation2 ...]'' in microns\n>>>');
+    log_userinput{1,4} = num2str(intervals);
     intervals = intervals * 1E-6;
     maxDist = input('What is the maximum error in indentations (in microns)\n>>>');
+    log_userinput{1,5} = num2str(maxDist);
     maxDist = maxDist * 1E-6;
 elseif specialSelect == 5
     [analyzed_file_name, analyzed_path_name, analyzed_filter_index] = ...
@@ -89,8 +108,10 @@ elseif specialSelect == 5
     assumedCP = 0;
     detailedRun = 0;
     intervals = input('For which indentations do you want to see residuals?\nType ''[indentation1 indentation2 ...]'' in microns\n>>>');
+    log_userinput{1,4} = num2str(intervals);
     intervals = intervals * 1E-6;
     maxDist = input('What is the maximum error in indentations (in microns)\n>>>');
+    log_userinput{1,5} = num2str(maxDist);
     maxDist = maxDist * 1E-6;
 else
     print('invalid input')
@@ -123,7 +144,7 @@ for i = 1:e
     rawdata{1,3}(minCP_index)
     minCP_value
     if rawdata{1,3}(minCP_index) > minCP_value
-        while (rawdata{1,3}(minCP_index) > minCP_value) && (minCP_index+1>length(rawdata{1,3})) % Included "&& (minCP_index+1>length(rawdata{1,3})" as ran into error if minCP_value was outside lookup range, Max and Julia 25/01/18
+        while (rawdata{1,3}(minCP_index) > minCP_value) && (minCP_index+1<length(rawdata{1,3})) % Included "&& (minCP_index+1>length(rawdata{1,3})" as ran into error if minCP_value was outside lookup range, Max and Julia 25/01/18 % corrected this to <, Julia 03/12/18
             minCP_index = minCP_index+1;
         end
     end
@@ -268,8 +289,38 @@ for i = 1:e
         print('-dpng ','-r300',imagename);
     end
     fclose all
-        %% fit curve with the contact point from analysis
-        
+    
+    %% Write information about current run of batchforce to central log file
+    % Retrieve system time and reformat to 'YYYY.MM.DD - hh.mm.ss'
+    timestamp = clock;
+    formatSpec = '%4d.%02d.%02d - %02d.%02d.%02d';
+    timestamp = sprintf(formatSpec,timestamp(1,1),timestamp(1,2),timestamp(1,3),timestamp(1,4),timestamp(1,5),round(timestamp(1,6)));
+    
+    % Determining which batchforce script is currently used and when it was last modified
+    log_batchforceversion = dir([mfilename('fullpath'),'.m']);
+    log_batchforceversion1 = [log_batchforceversion.folder,' ',log_batchforceversion.name,' ',log_batchforceversion.date];
+    
+    % User name will be included - specified at very start of script for practicality
+    
+    % Combine path and name of file which has just been analysed
+    fileforlog = strcat(PathName, FileName(1,i)); 
+    
+    % Write new line in log file:
+    % Time file was analysed - batchforce: path, name, last modified - user name - curve which was analysed - user inputs in order and format given by user
+    fileID = fopen('D:\batchforce_log - DO NOT MOVE.csv','a');   % DO NOT CHANGE THIS UNLESS LOG FILE IS MOVED TO A DIFFERENT LOCATION!
+    formatSpec = '%s\t%s\t%s\t%s';
+    fprintf(fileID,formatSpec,timestamp,log_batchforceversion1, log_user,fileforlog{1,1});
+    for log_counter = 1:size(log_userinput,2)-1
+        formatSpec = '\t%s';
+        fprintf(fileID,formatSpec,log_userinput{1,log_counter});
+    end
+    log_counter = size(log_userinput,2);
+    formatSpec = '\t%s\n';
+    fprintf(fileID,formatSpec,log_userinput{1,log_counter});
+    fclose(fileID);
+    
+    %% fit curve with the contact point from analysis
+    
         %% draw the graph
 end
     
