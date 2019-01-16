@@ -9,6 +9,9 @@ function [i]= batchforce
 %% the cantilevers should be calibrated and only certain headers can be
 %% read.
 
+% Version 23/10/18 Julia Becker; amended to specify which columns of the
+% rawdata file should be analysed, default is now 'vDeflection' and
+% 'measuredHeight'. Previously it was columns 2 and 3 regardless of name.
 % Version 06/12/2018 Julia Becker: Now logging every curve which was
 % analysed. Please amend user name as needed.
 
@@ -134,8 +137,19 @@ for i = 1:e
     %% Read the force curve data and cut of 'bad' start and end
     [rawdata,headerinfo] = Readfile(PathName,FileName(i));
     rawdata
-    rawdata{2} = smooth(rawdata{2},10);% inserted by David 14/03/13
-    rawdata = CleanData(rawdata);
+    [vDefl, mHeight, number_rawdata_columns] = FindColumnsNeeded(headerinfo, 'vDeflection', 'measuredHeight'); % variables 'vDefl' and 'mHeight' used only in this cell, please change names according to rawdata columns you're looking for
+    rawdata{vDefl} = smooth(rawdata{vDefl},10); % inserted by David 14/03/13, altered by Julia 23/10/18 to accommodate new variable
+    rawdata = CleanData(rawdata, vDefl, mHeight); % altered by Julia 23/10/18; rawdata columns as specified above will be written to rawdata columns 2 and 3 for historical reasons so that rest of script can remain the same
+    
+    % log value of variables vDefl and mHeight 
+    name = strcat(PathName, 'Log_vDefl_mHeight_values.txt');
+    variables = strjoin({'vDefl', num2str(vDefl), 'mHeight', num2str(mHeight)},'\t');
+    
+    fid = fopen(name, 'at');
+    fprintf(fid, '%38s\t%s\n', FileName{1,i}, variables);
+    fclose(fid);
+    clear vDefl mHeight name variables fid
+    
     
     %% this loop following finds the index of the point with minCP_value
     minCP_value = min([(max(rawdata{1,3}) - 2E-6) (min(rawdata{1,3}) + 2*beadradius)]) % the multiplication of bead radiud by factor 2 changed David 14/03/13 
