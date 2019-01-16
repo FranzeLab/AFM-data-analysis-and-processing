@@ -51,7 +51,7 @@ newapproachdata = [approachdata(:,1)-rawdata{1,3}(contactpointindex),approachdat
 %% fit forcecurve data to the best contactpoint
 forcecurvedata = [rawdata{1,3}(contactpointindex:numberofdatapoints,1) rawdata{1,2}(contactpointindex:numberofdatapoints,1)];
 forcecurvedata = [(forcecurvedata(:,1)-rawdata{1,3}(contactpointindex)),forcecurvedata(:,2)-approachfitcoefficients(1,1)*forcecurvedata(:,1)-approachfitcoefficients(1,2)];
-indentationdata = [forcecurvedata(:,1) - springConstant*forcecurvedata(:,2), forcecurvedata(:,2)];
+indentationdata = [forcecurvedata(:,1) - forcecurvedata(:,2)/springConstant, forcecurvedata(:,2)]; %akw48: Corrected indentation calculation
 indentationdata(:,1) = (-1)*indentationdata(:,1);
 indentation = max(indentationdata(:,1));
 force = max(indentationdata(:,2));
