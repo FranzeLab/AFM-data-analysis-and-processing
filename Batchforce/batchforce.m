@@ -31,9 +31,17 @@ if (q == 0)
 end
 
 %% get the necessary inputs
-
-while strcmp('YourNameHere',log_user) == 1 | strcmp('',log_user) == 1
-    log_user = input('Please enter username for logfile >','s');
+existsd = exist('d:\','dir');
+if existsd == 0
+    fprintf('WARNING: D: does not exist. Logfile cannot be written\n');
+    m=input('Do you want to continue, Y/N [Y]:','s');
+    if m=='N' | m=='n'
+       return       
+    end
+else
+    while strcmp('YourNameHere',log_user) == 1 | strcmp('',log_user) == 1
+        log_user = input('Please enter username for logfile >','s');
+    end
 end
 
 log_userinput = {};
@@ -329,18 +337,19 @@ for i = 1:e
     
     % Write new line in log file:
     % Time file was analysed - batchforce: path, name, last modified - user name - curve which was analysed - user inputs in order and format given by user
-    fileID = fopen('D:\batchforce_log - DO NOT MOVE.csv','a');   % DO NOT CHANGE THIS UNLESS LOG FILE IS MOVED TO A DIFFERENT LOCATION!
-    formatSpec = '%s\t%s\t%s\t%s';
-    fprintf(fileID,formatSpec,timestamp,log_batchforceversion1, log_user,fileforlog{1,1});
-    for log_counter = 1:size(log_userinput,2)-1
-        formatSpec = '\t%s';
-        fprintf(fileID,formatSpec,log_userinput{1,log_counter});
+    if existsd == 7
+       fileID = fopen('D:\batchforce_log - DO NOT MOVE.csv','a');   % DO NOT CHANGE THIS UNLESS LOG FILE IS MOVED TO A DIFFERENT LOCATION!
+       formatSpec = '%s\t%s\t%s\t%s';
+       fprintf(fileID,formatSpec,timestamp,log_batchforceversion1, log_user,fileforlog{1,1});
+       for log_counter = 1:size(log_userinput,2)-1
+          formatSpec = '\t%s';
+          fprintf(fileID,formatSpec,log_userinput{1,log_counter});
+       end
+       log_counter = size(log_userinput,2);
+       formatSpec = '\t%s\n';
+       fprintf(fileID,formatSpec,log_userinput{1,log_counter});
+       fclose(fileID);
     end
-    log_counter = size(log_userinput,2);
-    formatSpec = '\t%s\n';
-    fprintf(fileID,formatSpec,log_userinput{1,log_counter});
-    fclose(fileID);
-    
     %% fit curve with the contact point from analysis
     
         %% draw the graph
