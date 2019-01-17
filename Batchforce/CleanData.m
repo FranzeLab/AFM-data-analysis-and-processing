@@ -1,4 +1,4 @@
-function[rawdata] = CleanData_Julia_181023(orgrawdata, column1_index, column2_index)
+function[rawdata] = CleanData(orgrawdata, column1_index, column2_index)
 
 % clean rawdata from messy start/finish
 firstdatapoint = max(orgrawdata{1,column2_index});

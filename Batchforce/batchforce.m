@@ -1,5 +1,5 @@
 
-function [i]= batchforce 
+function batchforce
 %% batchforce analyzes a batch of force curves obtained with a colloidal
 %% probe. The model used is the Hertz-model (assuming a paraboloid indenter
 %% rather than a spherical one). The program requires the force curves to
@@ -13,10 +13,11 @@ function [i]= batchforce
 % rawdata file should be analysed, default is now 'vDeflection' and
 % 'measuredHeight'. Previously it was columns 2 and 3 regardless of name.
 % Version 06/12/2018 Julia Becker: Now logging every curve which was
-% analysed. Please amend user name as needed.
+% analysed. Please amend user name as needed. If it is not amended from the
+% default, the user will be prompted. 
 
 %% Change accordingly, please!
-log_user = 'Julia';
+log_user = 'YourNameHere';
 
 %% Select the force curves to be analyzed
 
@@ -30,6 +31,11 @@ if (q == 0)
 end
 
 %% get the necessary inputs
+
+while strcmp('YourNameHere',log_user) == 1 | strcmp('',log_user) == 1
+    log_user = input('Please enter username for logfile >','s');
+end
+
 log_userinput = {};
 
 beadradius = input('Beadradius in nm >');
@@ -132,11 +138,14 @@ userInput{1} = {['beadradius' space num2str(beadradius)];...
 
 %% iteration over all files
 [w,e] =  size(FileName);
+filnum = 1;
 for i = 1:e
     
     %% Read the force curve data and cut of 'bad' start and end
+    fprintf('\nAnalysing %d of %d', filnum, e);
+    filnum = filnum +1;
     [rawdata,headerinfo] = Readfile(PathName,FileName(i));
-    rawdata
+    rawdata;
     [vDefl, mHeight, number_rawdata_columns] = FindColumnsNeeded(headerinfo, 'vDeflection', 'measuredHeight'); % variables 'vDefl' and 'mHeight' used only in this cell, please change names according to rawdata columns you're looking for
     rawdata{vDefl} = smooth(rawdata{vDefl},10); % inserted by David 14/03/13, altered by Julia 23/10/18 to accommodate new variable
     rawdata = CleanData(rawdata, vDefl, mHeight); % altered by Julia 23/10/18; rawdata columns as specified above will be written to rawdata columns 2 and 3 for historical reasons so that rest of script can remain the same
@@ -152,11 +161,11 @@ for i = 1:e
     
     
     %% this loop following finds the index of the point with minCP_value
-    minCP_value = min([(max(rawdata{1,3}) - 2E-6) (min(rawdata{1,3}) + 2*beadradius)]) % the multiplication of bead radiud by factor 2 changed David 14/03/13 
+    minCP_value = min([(max(rawdata{1,3}) - 2E-6) (min(rawdata{1,3}) + 2*beadradius)]); % the multiplication of bead radius by factor 2 changed David 14/03/13 
     minCP_index = 1;
-    length(rawdata{1,3})
-    rawdata{1,3}(minCP_index)
-    minCP_value
+    length(rawdata{1,3});
+    rawdata{1,3}(minCP_index);
+    minCP_value;
     if rawdata{1,3}(minCP_index) > minCP_value
         while (rawdata{1,3}(minCP_index) > minCP_value) && (minCP_index+1<length(rawdata{1,3})) % Included "&& (minCP_index+1>length(rawdata{1,3})" as ran into error if minCP_value was outside lookup range, Max and Julia 25/01/18 % corrected this to <, Julia 03/12/18
             minCP_index = minCP_index+1;
@@ -184,6 +193,7 @@ for i = 1:e
             RESULTS(w,6) = GetHeaderValue(results,'bestcontactpointrms');
             rawdata = {rawdata{1,1}(1:end-resolution) rawdata{1,2}(1:end-resolution) rawdata{1,3}(1:end-resolution)};
             w=w+1;
+            fprintf('.');
         end
         filename = [PathName FileName{i}(1:end-4) '.mat'];
         if 1 == exist('RESULTS', 'var')
@@ -221,12 +231,11 @@ for i = 1:e
         [approachfit] = fitapproach (approachdata);
         approachfitcoefficients = coeffvalues(approachfit);
         newapproachdata = [approachdata(:,1)-rawdata{1,3}(contactpointindex),approachdata(:,2)-approachfitcoefficients(1,1)*approachdata(:,1)-approachfitcoefficients(1,2)];
-        
         %% recalculate indentationdata
         springConstant = GetHeaderValue(headerinfo,'springConstant');
         forcecurvedata = [rawdata{1,3}(contactpointindex:numberofdatapoints,1) rawdata{1,2}(contactpointindex:numberofdatapoints,1)];
         forcecurvedata = [(forcecurvedata(:,1)-rawdata{1,3}(contactpointindex)),forcecurvedata(:,2)-approachfitcoefficients(1,1)*forcecurvedata(:,1)-approachfitcoefficients(1,2)];
-        indentationdata = [forcecurvedata(:,1) - springConstant*forcecurvedata(:,2), forcecurvedata(:,2)];
+        indentationdata = [forcecurvedata(:,1) - forcecurvedata(:,2)/springConstant, forcecurvedata(:,2)];
         indentationdata(:,1) = (-1)*indentationdata(:,1);
         
         %% make additional indentationdata from fit data
@@ -247,7 +256,6 @@ for i = 1:e
                 indentationdata(:,2) = 0
             end
         end
-                
         %% draw the graph
         if specialSelect == 4
             datax = [(-1)*newapproachdata(:,1); indentationdata(:,1)];
@@ -286,7 +294,7 @@ for i = 1:e
             axis([0 7E-6 -0.2E-8 0.2E-8])
             hold off
         end
-        
+
         %% save the plot
         filename = [PathName FileName{i}];
         r = length(filename);
@@ -302,7 +310,7 @@ for i = 1:e
         end
         print('-dpng ','-r300',imagename);
     end
-    fclose all
+    fclose all;
     
     %% Write information about current run of batchforce to central log file
     % Retrieve system time and reformat to 'YYYY.MM.DD - hh.mm.ss'
@@ -313,7 +321,7 @@ for i = 1:e
     % Determining which batchforce script is currently used and when it was last modified
     log_batchforceversion = dir([mfilename('fullpath'),'.m']);
     log_batchforceversion1 = [log_batchforceversion.folder,' ',log_batchforceversion.name,' ',log_batchforceversion.date];
-    
+
     % User name will be included - specified at very start of script for practicality
     
     % Combine path and name of file which has just been analysed
@@ -368,6 +376,7 @@ end
     %disp(i)
     %disp(MaxForceVector(counter))
     %disp(timestamp)
+fprintf('\nFinished.\n')
 end
 %path = input(path)
 %beadsize = input(beadsize)
