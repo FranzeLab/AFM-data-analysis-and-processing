@@ -1,16 +1,33 @@
 function [contactpointquality] = contactpointfit(rawdata,numberofdatapoints,contactpointquality,springConstant,loop,contactpointindex,userInput)
 % determines the rms of weighed fits of the force curve and the
 % approachdata
+
+% akw48: Julia and Ryan found an issue, that I think is to do with the
+% length of the data sets. I have adjusted the code below to allow for a
+% scaling factor. It seems like the most important one is the minimum
+% points in the two "if (length(indentationdata)" conditions below. This
+% was set to 10, but I have changed it to scale with the data, so that it
+% is rounded to the nearest integer to 1% of the data points (as 10 is 1%
+% of the example given by andreas of a 1000 data point curve). So Minpoints
+% will have a new default, while the others can be adjusted by commenting
+% out the lines that set them to 1.
+loop1res = round(numberofdatapoints()/1000,0);
+loop2res = round(numberofdatapoints()/1000,0);
+Minpoints = round(numberofdatapoints()/100,0);
+%Minpoints = 10;
+loop1res = 1;
+loopres2 = 1;
+
 if (loop==1)
-    checkindices = contactpointindex:15:numberofdatapoints-20;
+    checkindices = contactpointindex:15*loop1res:numberofdatapoints-20*loop1res; 
     counter = length(checkindices);
 elseif (loop==2)
-    if (contactpointindex<=numberofdatapoints-40)
-        checkindices = contactpointindex-35:contactpointindex+35;
-    elseif (contactpointindex <= numberofdatapoints-20)
-        checkindices = contactpointindex-35:contactpointindex+15;
+    if (contactpointindex<=numberofdatapoints-40*loop2res)
+        checkindices = contactpointindex-35*loop2res:loop2res:contactpointindex+35*loop2res;
+    elseif (contactpointindex <= numberofdatapoints-20*loop2res)
+        checkindices = contactpointindex-35*loop2res:loop2res:contactpointindex+15*loop2res;
     else 
-        checkindices = contactpointindex-35:contactpointindex;
+        checkindices = contactpointindex-35*loop2res:loop2res:contactpointindex;
     end   
     counter = length(checkindices);
 else
@@ -31,7 +48,7 @@ for i = 1:counter
     indentationdata(:,1) = (-1)*indentationdata(:,1);
     %% force curve fit
     weight_user_index = GetHeaderValue(userInput,'weight_user_index');
-    if (length(indentationdata)>10)
+    if (length(indentationdata)>Minpoints)
         if weight_user_index == 1
             [Hertzfitt,Hertzfitquality] = weighedhertzfit(indentationdata);
         elseif weight_user_index == 0
@@ -42,8 +59,9 @@ for i = 1:counter
         if (Hertzfitcoefficient < 0)
             Hertzfitqualitycell{5,1} = NaN;
         end
-    elseif (length(indentationdata)<=10)
+    elseif (length(indentationdata)<=Minpoints)
         Hertzfitqualitycell{5,1} = NaN;
+        fprintf('*');
     end
     %% fill quality matrix
     contactpointquality(contactpointindex,1) = contactpointindex;
