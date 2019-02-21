@@ -10,10 +10,11 @@ function [contactpointquality] = contactpointfit(rawdata,numberofdatapoints,cont
 % is rounded to the nearest integer to 1% of the data points (as 10 is 1%
 % of the example given by andreas of a 1000 data point curve). So Minpoints
 % will have a new default, while the others can be adjusted by commenting
-% out the lines that set them to 1.
+% out the lines that set them to 1. 
+% Tweaked Minpoints to 4%
 loop1res = round(numberofdatapoints()/1000,0);
 loop2res = round(numberofdatapoints()/1000,0);
-Minpoints = round(numberofdatapoints()/100,0);
+Minpoints = round(0.04*numberofdatapoints(),0);
 %Minpoints = 10;
 loop1res = 1;
 loopres2 = 1;
