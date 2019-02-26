@@ -62,7 +62,7 @@ for i = 1:counter
         end
     elseif (length(indentationdata)<=Minpoints)
         Hertzfitqualitycell{5,1} = NaN;
-        fprintf('*');
+ %       fprintf('*');
     end
     %% fill quality matrix
     contactpointquality(contactpointindex,1) = contactpointindex;

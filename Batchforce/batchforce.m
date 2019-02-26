@@ -86,7 +86,7 @@ elseif specialSelect == 2
     else detailedRun = 1;
     end
 elseif specialSelect == 1
-    resolution = input('Every how many data points should a fit be performed?\nWARNING: A too small value may make the calculation take forever.\nFor a 1000 data point force curves 7 may be reasonable.\nBecause of certain parts of the algorithm the number should be below 20.\n>>>');
+    resolution = input('Every how many data points should a fit be performed?\nWARNING: A too small value may make the calculation take forever.\nFor a 1000 data point force curves 7 may be reasonable.\nBecause of certain parts of the algorithm the number should be below 20.\nTo do only one fit over the whole data set, choose 0.\n>>>');
     log_userinput{1,4} = num2str(resolution);
     forceInput = 0;
     indentationInput = 0.03*beadradius;
@@ -150,7 +150,7 @@ filnum = 1;
 for i = 1:e
     
     %% Read the force curve data and cut of 'bad' start and end
-    fprintf('\nAnalysing %d of %d', filnum, e);
+    fprintf('\n %s (%d of %d)', FileName{1,i},filnum, e);
     filnum = filnum +1;
     [rawdata,headerinfo] = Readfile(PathName,FileName(i));
     rawdata;
@@ -184,11 +184,17 @@ for i = 1:e
     local_indentation = 15000E-9;
     local_CP_index = minCP_index + 1;
     if specialSelect == 1
+        steps = round(length(rawdata{1,3})/resolution,0);
+        progress = 0;
+        fprintf(' - ');
+        fprintf(num2str(progress,'%05.2f'));
+        fprintf('%%');
         w=1;
-        while (minCP_index < local_CP_index)
+        while (minCP_index < local_CP_index) && w > 0 
             results = forcecurveanalysis(rawdata,headerinfo,userInput,minCP_index,w,local_CP_index);
             local_indentation = GetHeaderValue(results,'indentation');
             if (local_indentation < indentationInput)
+            %    fprintf('local indentation is less than indentation input');
                 break
             end
             local_force = GetHeaderValue(results,'force');
@@ -200,9 +206,19 @@ for i = 1:e
             RESULTS(w,5) = GetHeaderValue(results,'contactpointindex');
             RESULTS(w,6) = GetHeaderValue(results,'bestcontactpointrms');
             rawdata = {rawdata{1,1}(1:end-resolution) rawdata{1,2}(1:end-resolution) rawdata{1,3}(1:end-resolution)};
-            w=w+1;
-            fprintf('.');
+            
+            progress= round(100*w/steps,2);
+            if resolution > 0
+                w=w+1;
+            else 
+                w = 0;
+            end
+            fprintf('\b\b\b\b\b\b');
+            fprintf(num2str(progress,'%05.2f'));
+            fprintf('%%');
         end
+        fprintf('\b\b\b\b\b\b');
+        fprintf('Done');
         filename = [PathName FileName{i}(1:end-4) '.mat'];
         if 1 == exist('RESULTS', 'var')
             save(filename, 'RESULTS', '-mat')
