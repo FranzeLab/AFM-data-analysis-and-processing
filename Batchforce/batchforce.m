@@ -89,7 +89,7 @@ elseif specialSelect == 1
     resolution = input('Every how many data points should a fit be performed?\nWARNING: A too small value may make the calculation take forever.\nFor a 1000 data point force curves 7 may be reasonable.\nBecause of certain parts of the algorithm the number should be below 20.\nTo do only one fit over the whole data set, choose 0.\n>>>');
     log_userinput{1,4} = num2str(resolution);
     forceInput = 0;
-    indentationInput = 0.03*beadradius;
+    indentationInput = 0.01*beadradius; %Changed original 0.03 to 0.01
     assumedCP = 0;
     detailedRun = 0;
 elseif specialSelect == 4
