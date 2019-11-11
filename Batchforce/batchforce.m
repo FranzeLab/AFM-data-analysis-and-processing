@@ -21,7 +21,7 @@ log_user = 'YourNameHere';
 
 %% Select the force curves to be analyzed
 
-[FileName,PathName,FilterIndex] = uigetfile({'*.out;*.txt','potential force curves'},'Select curve','C:\ac563\work\measurementdata\test\','MultiSelect','on');
+[FileName,PathName,FilterIndex] = uigetfile({'*.out;*.txt','potential force curves'},'Select curve','D:\Julia\data\TO DO\','MultiSelect','on');
 
 % this iscell check is required, because if only one force curve is analyzed it is not
 % put into a field, but FileName is required to be in a field later on.
@@ -190,40 +190,45 @@ for i = 1:e
         fprintf(num2str(progress,'%05.2f'));
         fprintf('%%');
         w=1;
-        while (minCP_index < local_CP_index) && w > 0 
-            results = forcecurveanalysis(rawdata,headerinfo,userInput,minCP_index,w,local_CP_index);
-            local_indentation = GetHeaderValue(results,'indentation');
-            if (local_indentation < indentationInput)
-            %    fprintf('local indentation is less than indentation input');
-                break
-            end
-            local_force = GetHeaderValue(results,'force');
-            local_CP_index = GetHeaderValue(results,'contactpointindex');
-            RESULTS(w,1) = GetHeaderValue(results,'indentation');
-            RESULTS(w,2) = GetHeaderValue(results,'force');
-            RESULTS(w,3) = GetHeaderValue(results,'modulus');
-            RESULTS(w,4) = GetHeaderValue(results,'hertzfactor');
-            RESULTS(w,5) = GetHeaderValue(results,'contactpointindex');
-            RESULTS(w,6) = GetHeaderValue(results,'bestcontactpointrms');
-            rawdata = {rawdata{1,1}(1:end-resolution) rawdata{1,2}(1:end-resolution) rawdata{1,3}(1:end-resolution)};
-            
-            progress= round(100*w/steps,2);
-            if resolution > 0
-                w=w+1;
-            else 
-                w = 0;
+        try
+            while (minCP_index < local_CP_index) && w > 0
+                results = forcecurveanalysis(rawdata,headerinfo,userInput,minCP_index,w,local_CP_index);
+                local_indentation = GetHeaderValue(results,'indentation');
+                if (local_indentation < indentationInput)
+                    %    fprintf('local indentation is less than indentation input');
+                    break
+                end
+                local_force = GetHeaderValue(results,'force');
+                local_CP_index = GetHeaderValue(results,'contactpointindex');
+                RESULTS(w,1) = GetHeaderValue(results,'indentation');
+                RESULTS(w,2) = GetHeaderValue(results,'force');
+                RESULTS(w,3) = GetHeaderValue(results,'modulus');
+                RESULTS(w,4) = GetHeaderValue(results,'hertzfactor');
+                RESULTS(w,5) = GetHeaderValue(results,'contactpointindex');
+                RESULTS(w,6) = GetHeaderValue(results,'bestcontactpointrms');
+                rawdata = {rawdata{1,1}(1:end-resolution) rawdata{1,2}(1:end-resolution) rawdata{1,3}(1:end-resolution)};
+                
+                progress= round(100*w/steps,2);
+                if resolution > 0
+                    w=w+1;
+                else
+                    w = 0;
+                end
+                fprintf('\b\b\b\b\b\b');
+                fprintf(num2str(progress,'%05.2f'));
+                fprintf('%%');
             end
             fprintf('\b\b\b\b\b\b');
-            fprintf(num2str(progress,'%05.2f'));
-            fprintf('%%');
+            fprintf('Done');
+            filename = [PathName FileName{i}(1:end-4) '.mat'];
+            if 1 == exist('RESULTS', 'var')
+                save(filename, 'RESULTS', '-mat')
+            end
+            clear('RESULTS', 'rawdata');
+        catch
+            fprintf('\b\b\b\b\b\b');
+            fprintf('FAILED - SKIPPED!');
         end
-        fprintf('\b\b\b\b\b\b');
-        fprintf('Done');
-        filename = [PathName FileName{i}(1:end-4) '.mat'];
-        if 1 == exist('RESULTS', 'var')
-            save(filename, 'RESULTS', '-mat')
-        end
-        clear('RESULTS', 'rawdata');
     elseif specialSelect == 4 || 5
             %% find the corresponding .mat file from the analysis
         analyzed_file_index = strmatch(FileName{i}(1:end-4), analyzed_file_name);
