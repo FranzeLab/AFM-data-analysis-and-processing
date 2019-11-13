@@ -195,7 +195,7 @@ for i = 1:e
                 results = forcecurveanalysis(rawdata,headerinfo,userInput,minCP_index,w,local_CP_index);
                 local_indentation = GetHeaderValue(results,'indentation');
                 if (local_indentation < indentationInput)
-                    %    fprintf('local indentation is less than indentation input');
+                    fprintf('local indentation is less than indentation input');
                     break
                 end
                 local_force = GetHeaderValue(results,'force');
@@ -206,6 +206,7 @@ for i = 1:e
                 RESULTS(w,4) = GetHeaderValue(results,'hertzfactor');
                 RESULTS(w,5) = GetHeaderValue(results,'contactpointindex');
                 RESULTS(w,6) = GetHeaderValue(results,'bestcontactpointrms');
+                RESULTS(w,7) = rawdata{1,3}(local_CP_index); %AKW: record CP in meters
                 rawdata = {rawdata{1,1}(1:end-resolution) rawdata{1,2}(1:end-resolution) rawdata{1,3}(1:end-resolution)};
                 
                 progress= round(100*w/steps,2);
@@ -225,9 +226,10 @@ for i = 1:e
                 save(filename, 'RESULTS', '-mat')
             end
             clear('RESULTS', 'rawdata');
-        catch
+        catch err %err is an MException struct
             fprintf('\b\b\b\b\b\b');
             fprintf('FAILED - SKIPPED!');
+            fprintf(1,'\n%s\n',err.message);
         end
     elseif specialSelect == 4 || 5
             %% find the corresponding .mat file from the analysis

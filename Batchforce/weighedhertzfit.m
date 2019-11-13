@@ -7,7 +7,7 @@ Weights = 1:indentationdatapoints;
 Weights = (Weights'/indentationdatapoints).^2;
 q = 1;
 while (q==1)
-    weighedHertzmodel = fittype({'x^(3/2)'},'coefficients','Hertzfactor');
+    weighedHertzmodel = fittype({'real(x.^(3/2))'},'coefficients','Hertzfactor');
     weighedoptions = fitoptions('Method', 'LinearLeastSquares','Weights',Weights);
     [weighedHertzfit,weighedHertzfitquality,weighedHertzfitoutput] = fit(fitdata(:,1),fitdata(:,2),weighedHertzmodel,weighedoptions);
     w = feval(weighedHertzfit,fitdata(:,1));
@@ -19,7 +19,7 @@ while (q==1)
             fitdata = fitdata(2:end,:);
             Weights = Weights(2:end);
         end
-    elseif (difference(1)<2*meandiff || length(fitdata) <= 0.5*indentationdatapoints)
+    elseif ( (difference(1) < 2*meandiff) || (length(fitdata) <= 0.5*indentationdatapoints)) 
         q=0;
     else
         error('error at weighedhertzfit badcp elimination')
