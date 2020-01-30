@@ -22,9 +22,11 @@ function batchforce(varargin)
 % FindCoordinates.m function.
 % 
 % AKW other recent changes include:
+% Contact Point in um in column 7
+% Stopping if K goes below 1 Pa
 % The option of how to deal with indentations that are over R/3: either
 % warn and continue (w), or crop the indentation at R/3 (c).
-% the possibility to run batchforce from the command line with 6 
+% The possibility to run batchforce from the command line with 6 
 % (or optionally [] 7) command line arguments:
 % batchforce [PathName] log_user beadradius weight_user_index crop specialSelect resolution
 % eg batchforce Alex 18640 n w 1 0
@@ -36,6 +38,7 @@ log_user = 'YourNameHere';
 %% AKW: use input args if present and correct
 % originally expceted 6, now implementing possibility to call batchforce
 % with an input folder, too, hence optionally a 7th
+% note that this assumes specialSelect = 1; untested with other numbers
 ExpectedArgs = 6;
 PathName = 0;
    
@@ -67,22 +70,17 @@ if PathName == 0
     PathName = uigetdir('D:\data','Select folder containing txt exports from JPK DP');
 end
 
-% Get all .txt files in 'files and labfile' in this folder
+% Get all .txt files in this folder
 invent = dir(fullfile(PathName,'*.txt'));
 
-% Make a cell containing all filenames
+% Make a cell containing all filenames, not including those that don't look
+% like afm data files
 FileName = {invent.name};
 relevant = strfind(FileName,'force-save-');
 irrelevant = find(cellfun(@isempty,relevant));
 FileName(irrelevant) = [];
 
-% this iscell check is required, because if only one force curve is analyzed it is not
-% put into a field, but FileName is required to be in a field later on.
-q = iscell(FileName);
-if (q == 0)
-    FileName = {FileName};
-end
-
+    
 %% get the necessary inputs
 existsd = exist('d:\','dir');
 if existsd == 0
@@ -229,8 +227,8 @@ for i = 1:e
     rawdata{vDefl} = smooth(rawdata{vDefl},10); % inserted by David 14/03/13, altered by Julia 23/10/18 to accommodate new variable
     rawdata = CleanData(rawdata, vDefl, mHeight, time); % JB 13/01/20 line amended to include time
     
-    % log value of variables vDefl and mHeight 
-    name = strcat(PathName, 'Log_vDefl_mHeight_values.txt');
+    % log value of variables vDefl and mHeight
+    name = fullfile(PathName,'Log_vDefl_mHeight_values.txt');
     variables = strjoin({'vDefl', num2str(vDefl), 'mHeight', num2str(mHeight), 'seriesTime', num2str(time)},'\t'); % JB 13/01/20 line amended to include time
     %% AMENDMENTS JULIA 13/01/20 END
     
@@ -333,7 +331,6 @@ for i = 1:e
                 if w > 2
                     fprintf('\b\b\b\b\b\b\b');
                 end
-                %fprintf('\n');
                 fprintf(num2str(progress,'%06.2f'));
                 fprintf('%%');
             end
@@ -352,7 +349,6 @@ for i = 1:e
             end
 
         catch err %err is an MException struct
-           % fprintf('\b\b\b\b\b\b');   %uncomment after test!!
             fprintf('FAILED - SKIPPED!');
             fprintf(1,'\n%s\n',err.message);
         end
