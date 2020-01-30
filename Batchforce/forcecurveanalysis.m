@@ -28,6 +28,10 @@ if w == 1
         [bestcontactpointrms,bestcontactpointindex] = min(usedcontactpointquality(:,4));
         contactpointindex = usedcontactpointquality(bestcontactpointindex,1);
     end
+elseif w==0   %new for cropping overindents
+    contactpointindex = local_CP_index;
+    bestcontactpointrms = 0;   % the value from the w=1 run will be used
+    
 else
     loop = 2;
     contactpointindex = local_CP_index;
@@ -41,6 +45,7 @@ else
     %% look for minimum rms of the force curve in the contactpointmatrix
     [bestcontactpointrms,bestcontactpointindex] = min(usedcontactpointquality(:,4));
     contactpointindex = usedcontactpointquality(bestcontactpointindex,1);
+    
 end
 %% fit approach data to the best contactpoint
 approachdata = [rawdata{1,3}(1:contactpointindex) rawdata{1,2}(1:contactpointindex)];

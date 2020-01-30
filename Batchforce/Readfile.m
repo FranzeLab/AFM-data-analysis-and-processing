@@ -4,7 +4,7 @@ function [rawdata, headerinfo] = Readfile(PathName,FileName)
 % The next loop check for different Versions of Headers with different
     % settings. It does NOT contain all possibilities, and will also have
     % to be given alternatives after JPK updates etc.
-    filename = strcat(PathName, FileName);
+    filename = fullfile(PathName, FileName);
     fileend = filename{1,1}(end-2:end);
     if (1 == strcmp('txt',fileend))
         [rawdata,headerinfo] = readforcecurve_3_4_15(filename);

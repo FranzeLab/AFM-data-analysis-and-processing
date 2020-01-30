@@ -1,5 +1,5 @@
 
-function batchforce
+function batchforce(varargin)
 %% batchforce analyzes a batch of force curves obtained with a colloidal
 %% probe. The model used is the Hertz-model (assuming a paraboloid indenter
 %% rather than a spherical one). The program requires the force curves to
@@ -14,14 +14,67 @@ function batchforce
 % 'measuredHeight'. Previously it was columns 2 and 3 regardless of name.
 % Version 06/12/2018 Julia Becker: Now logging every curve which was
 % analysed. Please amend user name as needed. If it is not amended from the
-% default, the user will be prompted. 
+% default, the user will be prompted.
+% 
+% Version 13/01/20 Julia Becker: Includes time which indentation took in
+% column 8, x position in column 9 and y position in column 10 of RESULTS.
+% This requires a modified CleanData_inclTime.m function and a
+% FindCoordinates.m function.
+% 
+% AKW other recent changes include:
+% The option of how to deal with indentations that are over R/3: either
+% warn and continue (w), or crop the indentation at R/3 (c).
+% the possibility to run batchforce from the command line with 6 
+% (or optionally [] 7) command line arguments:
+% batchforce [PathName] log_user beadradius weight_user_index crop specialSelect resolution
+% eg batchforce Alex 18640 n w 1 0
+
 
 %% Change accordingly, please!
 log_user = 'YourNameHere';
 
-%% Select the force curves to be analyzed
+%% AKW: use input args if present and correct
+% originally expceted 6, now implementing possibility to call batchforce
+% with an input folder, too, hence optionally a 7th
+ExpectedArgs = 6;
+PathName = 0;
+   
+if nargin == ExpectedArgs
+    log_user = varargin{1};
+    beadradius = str2num(varargin{2});
+    weight_user_index = varargin{3};
+    crop = varargin{4};
+    specialSelect = str2num(varargin{5});
+    resolution = str2num(varargin{6});
+elseif nargin == ExpectedArgs+1
+    PathName = varargin{1};
+    log_user = varargin{2};
+    beadradius = str2num(varargin{3});
+    weight_user_index = varargin{4};
+    crop = varargin{5};
+    specialSelect = str2num(varargin{6});
+    resolution = str2num(varargin{7});
+    ExpectedArgs = ExpectedArgs+1;
+else    
+    fprintf('Unexpected number of arguments, prompting for inputs\n');
+end    
+    
+    
+    
 
-[FileName,PathName,FilterIndex] = uigetfile({'*.out;*.txt','potential force curves'},'Select curve','D:\Julia\data\TO DO\','MultiSelect','on');
+%% Select the force curves to be analyzed - ORIGINAL CELL REPLACED
+if PathName == 0
+    PathName = uigetdir('D:\data','Select folder containing txt exports from JPK DP');
+end
+
+% Get all .txt files in 'files and labfile' in this folder
+invent = dir(fullfile(PathName,'*.txt'));
+
+% Make a cell containing all filenames
+FileName = {invent.name};
+relevant = strfind(FileName,'force-save-');
+irrelevant = find(cellfun(@isempty,relevant));
+FileName(irrelevant) = [];
 
 % this iscell check is required, because if only one force curve is analyzed it is not
 % put into a field, but FileName is required to be in a field later on.
@@ -45,12 +98,14 @@ else
 end
 
 log_userinput = {};
-
-beadradius = input('Beadradius in nm >');
+if nargin ~= ExpectedArgs
+    beadradius = input('Beadradius in nm >');
+end
 log_userinput{1,1} = num2str(beadradius);
 beadradius = beadradius*1E-9;
-
-weight_user_index = input('Should data points at deeper indentations be given more weight[y/n]?\n>>>','s');
+if nargin ~= ExpectedArgs
+    weight_user_index = input('Should data points at deeper indentations be given more weight[y/n]?\n>>>','s');
+end
 log_userinput{1,2} = weight_user_index;
 if strcmp('y',weight_user_index) == 1
     weight_user_index = 1;
@@ -59,8 +114,9 @@ elseif strcmp('n',weight_user_index) == 1
 else
     error('no valid input')
 end
-
-specialSelect = input('Select type of analysis:\n(1)  Complete analysis with tabulated output\n(2)  Specific output for one Indentation\n(3)  Specific output for one Force\n(4)  Check fits\n(5)  Residuals\n>>>');
+if nargin ~= ExpectedArgs
+    specialSelect = input('Select type of analysis:\n(1)  Complete analysis with tabulated output\n(2)  Specific output for one Indentation\n(3)  Specific output for one Force\n(4)  Check fits\n(5)  Residuals\n>>>');
+end
 log_userinput{1,3} = num2str(specialSelect);
 
 if specialSelect == 3
@@ -86,8 +142,21 @@ elseif specialSelect == 2
     else detailedRun = 1;
     end
 elseif specialSelect == 1
-    resolution = input('Every how many data points should a fit be performed?\nWARNING: A too small value may make the calculation take forever.\nFor a 1000 data point force curves 7 may be reasonable.\nBecause of certain parts of the algorithm the number should be below 20.\nTo do only one fit over the whole data set, choose 0.\n>>>');
-    log_userinput{1,4} = num2str(resolution);
+    if nargin ~= ExpectedArgs
+        crop = input('How should batchforce handle indentations that are greater then R/3? \nTo warn and continue enter w\nTo crop and re-fit enter c\n>>>','s');
+    end
+    log_userinput{1,4} = crop;
+    if strcmp('w',crop) == 1
+        crop_logical = 0;
+    elseif strcmp('c',crop) == 1
+        crop_logical = 1;
+    else
+        error('no valid input')
+    end
+    if nargin ~= ExpectedArgs
+        resolution = input('Every how many data points should a fit be performed?\nWARNING: A too small value may make the calculation take forever.\nFor a 1000 data point force curves 7 may be reasonable.\nBecause of certain parts of the algorithm the number should be below 20.\nTo do only one fit over the whole data set, choose 0.\n>>>');
+    end
+    log_userinput{1,5} = num2str(resolution);
     forceInput = 0;
     indentationInput = 0.01*beadradius; %Changed original 0.03 to 0.01
     assumedCP = 0;
@@ -131,7 +200,7 @@ elseif specialSelect == 5
     log_userinput{1,5} = num2str(maxDist);
     maxDist = maxDist * 1E-6;
 else
-    print('invalid input')
+    fprintf('invalid input')
 end
 deletePoints = 0;
 
@@ -149,18 +218,21 @@ userInput{1} = {['beadradius' space num2str(beadradius)];...
 filnum = 1;
 for i = 1:e
     
+    %% AMENDMENTS JULIA 13/01/20 START
     %% Read the force curve data and cut of 'bad' start and end
     fprintf('\n %s (%d of %d)', FileName{1,i},filnum, e);
     filnum = filnum +1;
     [rawdata,headerinfo] = Readfile(PathName,FileName(i));
     rawdata;
     [vDefl, mHeight, number_rawdata_columns] = FindColumnsNeeded(headerinfo, 'vDeflection', 'measuredHeight'); % variables 'vDefl' and 'mHeight' used only in this cell, please change names according to rawdata columns you're looking for
+    [time, ~, ~] = FindColumnsNeeded(headerinfo, 'seriesTime', 'measuredHeight'); % JB 13/01/20 line added to include time
     rawdata{vDefl} = smooth(rawdata{vDefl},10); % inserted by David 14/03/13, altered by Julia 23/10/18 to accommodate new variable
-    rawdata = CleanData(rawdata, vDefl, mHeight); % altered by Julia 23/10/18; rawdata columns as specified above will be written to rawdata columns 2 and 3 for historical reasons so that rest of script can remain the same
+    rawdata = CleanData(rawdata, vDefl, mHeight, time); % JB 13/01/20 line amended to include time
     
     % log value of variables vDefl and mHeight 
     name = strcat(PathName, 'Log_vDefl_mHeight_values.txt');
-    variables = strjoin({'vDefl', num2str(vDefl), 'mHeight', num2str(mHeight)},'\t');
+    variables = strjoin({'vDefl', num2str(vDefl), 'mHeight', num2str(mHeight), 'seriesTime', num2str(time)},'\t'); % JB 13/01/20 line amended to include time
+    %% AMENDMENTS JULIA 13/01/20 END
     
     fid = fopen(name, 'at');
     fprintf(fid, '%38s\t%s\n', FileName{1,i}, variables);
@@ -187,17 +259,41 @@ for i = 1:e
         steps = round(length(rawdata{1,3})/resolution,0);
         progress = 0;
         fprintf(' - ');
-        fprintf(num2str(progress,'%05.2f'));
-        fprintf('%%');
+     %   fprintf(num2str(progress,'%05.2f'));
+     %   fprintf('%%');
         w=1;
+        mod = 2;
         try
-            while (minCP_index < local_CP_index) && w > 0
+            while (minCP_index < local_CP_index) && w > 0 && mod > 1
                 results = forcecurveanalysis(rawdata,headerinfo,userInput,minCP_index,w,local_CP_index);
                 local_indentation = GetHeaderValue(results,'indentation');
+                mod = GetHeaderValue(results,'modulus');
                 if (local_indentation < indentationInput)
                     fprintf('local indentation is less than indentation input');
                     break
                 end
+                % next bit inserted by akw48 to try to crop the data
+                % if the indentation was more than 1/3 bead radius. In 
+                % order to prevent the fit looping until no data is left, 
+                % the CP is maintained at the value established for the
+                % full data set. Although when resolution is nonzero, CP
+                % will be re-analysed after each removal of 'resolution' data points 
+                RESULTS(w,6) = GetHeaderValue(results,'bestcontactpointrms');
+                if local_indentation > beadradius/3 && crop_logical == 0 && w == 1
+                    fprintf('\nWarning: The indentation was more than is permitted by the Hertz model.\nApprox Progress:       ');
+                end
+                if local_indentation > beadradius/3 && crop_logical == 1
+                    fprintf('\nThe indentation was more than is permitted: data cropped.\nApprox Progress:       ');
+                    local_CP_index = GetHeaderValue(results,'contactpointindex');
+                    contactpoint_now = rawdata{1,3}(local_CP_index);
+                    [new_end,~]= find(rawdata{1,3} < (contactpoint_now-beadradius/3),1) ; 
+                    rawdata = {rawdata{1,1}(1:end) rawdata{1,2}(1:new_end) rawdata{1,3}(1:new_end)};
+                    results = forcecurveanalysis(rawdata,headerinfo,userInput,minCP_index,0,local_CP_index);
+                    local_indentation = GetHeaderValue(results,'indentation');
+                    local_CP_index = GetHeaderValue(results,'contactpointindex');
+                    crop_logical = 0;
+                end
+                
                 local_force = GetHeaderValue(results,'force');
                 local_CP_index = GetHeaderValue(results,'contactpointindex');
                 RESULTS(w,1) = GetHeaderValue(results,'indentation');
@@ -205,29 +301,58 @@ for i = 1:e
                 RESULTS(w,3) = GetHeaderValue(results,'modulus');
                 RESULTS(w,4) = GetHeaderValue(results,'hertzfactor');
                 RESULTS(w,5) = GetHeaderValue(results,'contactpointindex');
-                RESULTS(w,6) = GetHeaderValue(results,'bestcontactpointrms');
-                RESULTS(w,7) = rawdata{1,3}(local_CP_index); %AKW: record CP in meters
-                rawdata = {rawdata{1,1}(1:end-resolution) rawdata{1,2}(1:end-resolution) rawdata{1,3}(1:end-resolution)};
                 
+                %RESULTS(w,6) is taken above in case the fit is re-run after R/3
+                RESULTS(w,7) = rawdata{1,3}(local_CP_index); %AKW: record CP in meters
+                            %% INSERT JULIA 13/01/20 START
+                % Find time interval for indentation part
+                time2 = rawdata{1,1}(end,1);
+                time1 = rawdata{1,1}(RESULTS(w,5)-1,1);
+                time_interval = time2 - time1;
+
+                % Include indentation time in column 8
+                RESULTS(w,8) = time_interval;
+
+                % Include x position in column 9, y position in column 10
+                [pos_x, pos_y] = FindCoordinates(headerinfo);
+                RESULTS(w,9) = pos_x;
+                RESULTS(w,10) = pos_y;
+
+                rawdata = {rawdata{1,1}(1:end-resolution) rawdata{1,2}(1:end-resolution) rawdata{1,3}(1:end-resolution)};
+                if w == 1
+                    local_CP_index;
+                    steps = round((length(rawdata{1,3})-local_CP_index)/resolution,0);
+                    local_CP_index;
+                end
                 progress= round(100*w/steps,2);
                 if resolution > 0
                     w=w+1;
                 else
                     w = 0;
                 end
-                fprintf('\b\b\b\b\b\b');
-                fprintf(num2str(progress,'%05.2f'));
+                if w > 2
+                    fprintf('\b\b\b\b\b\b\b');
+                end
+                %fprintf('\n');
+                fprintf(num2str(progress,'%06.2f'));
                 fprintf('%%');
             end
-            fprintf('\b\b\b\b\b\b');
+            fprintf('\b\b\b\b\b\b\b');
             fprintf('Done');
-            filename = [PathName FileName{i}(1:end-4) '.mat'];
-            if 1 == exist('RESULTS', 'var')
+            filename = fullfile(PathName,[FileName{i}(1:end-4) '.mat']);
+
+         if 1 == exist('RESULTS', 'var')
                 save(filename, 'RESULTS', '-mat')
             end
             clear('RESULTS', 'rawdata');
+            if strcmp('w',crop) == 1
+                crop_logical = 0;
+            elseif strcmp('c',crop) == 1
+                crop_logical = 1;
+            end
+
         catch err %err is an MException struct
-            fprintf('\b\b\b\b\b\b');
+           % fprintf('\b\b\b\b\b\b');   %uncomment after test!!
             fprintf('FAILED - SKIPPED!');
             fprintf(1,'\n%s\n',err.message);
         end
@@ -356,7 +481,7 @@ for i = 1:e
     % User name will be included - specified at very start of script for practicality
     
     % Combine path and name of file which has just been analysed
-    fileforlog = strcat(PathName, FileName(1,i)); 
+    fileforlog = fullfile(PathName, FileName(1,i)); 
     
     % Write new line in log file:
     % Time file was analysed - batchforce: path, name, last modified - user name - curve which was analysed - user inputs in order and format given by user
