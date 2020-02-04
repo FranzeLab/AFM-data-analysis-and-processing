@@ -22,7 +22,7 @@ function batchforce(varargin)
 % FindCoordinates.m function.
 % 
 % AKW other recent changes include:
-% Contact Point in um in column 7
+% Contact Point in m in column 7
 % Stopping if K goes below 1 Pa
 % The option of how to deal with indentations that are over R/3: either
 % warn and continue (w), or crop the indentation at R/3 (c).
@@ -30,6 +30,8 @@ function batchforce(varargin)
 % (or optionally [] 7) command line arguments:
 % batchforce [PathName] log_user beadradius weight_user_index crop specialSelect resolution
 % eg batchforce Alex 18640 n w 1 0
+% contactpointfit changed to use sse instead of rmse which is much better 
+% for steep curves
 
 
 %% Change accordingly, please!
