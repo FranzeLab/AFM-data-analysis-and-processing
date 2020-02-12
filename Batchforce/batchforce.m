@@ -97,12 +97,15 @@ clear invent relevant relevant2 irrelevant relevance
 %% get the necessary inputs
 opsys = computer;
 if strcmp(opsys, 'PCWIN64') == 1 || strcmp(opsys, 'MACI64') == 1
-  log_file = fullfile(userpath,'batchforce_log - DO NOT MOVE.csv');
+  log_file = fullfile(userpath,'batchforce_log - DO NOT MOVE.csv')
 elseif strcmp(opsys, 'GLNXA64') == 1
   log_file = '/media/kflab/New Volume/batchforce_log - DO NOT MOVE.csv';
 %elseif strcmp(opsys, 'MACI64') == 1
 %  log_file = '~/Documents/MATLAB/batchforce_log - DO NOT MOVE.csv';
 else warndlg('Not sure what weird operating system you are using, man!')
+end
+if strcmp(opsys, 'PCWIN64') == 1 && exist('D:\batchforce_log - DO NOT MOVE.csv') == 2
+    log_file= 'D:\batchforce_log - DO NOT MOVE.csv'
 end
 existsd = exist(log_file);
 [log_folder,~,~] = fileparts(log_file);
