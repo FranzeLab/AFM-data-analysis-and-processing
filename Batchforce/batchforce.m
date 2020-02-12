@@ -34,8 +34,6 @@ function batchforce(varargin)
 % for steep curves
 
 
-%% Change accordingly, please!
-log_user = 'YourNameHere';
 
 %% AKW: use input args if present and correct
 % originally expceted 6, now implementing possibility to call batchforce
@@ -46,6 +44,8 @@ PathName = 0;
    
 if nargin == ExpectedArgs
     log_user = varargin{1};
+    diary(log_user)
+    disp(sprintf('Batchforce started: %s  ',datestr(now)));
     beadradius = str2num(varargin{2});
     weight_user_index = varargin{3};
     crop = varargin{4};
@@ -54,14 +54,18 @@ if nargin == ExpectedArgs
 elseif nargin == ExpectedArgs+1
     PathName = varargin{1};
     log_user = varargin{2};
+    diary(log_user)
+    disp(sprintf('Batchforce started: %s  ',datestr(now)));
     beadradius = str2num(varargin{3});
     weight_user_index = varargin{4};
     crop = varargin{5};
     specialSelect = str2num(varargin{6});
     resolution = str2num(varargin{7});
     ExpectedArgs = ExpectedArgs+1;
+
 else    
     fprintf('Unexpected number of arguments, prompting for inputs\n');
+    log_user = '';
 end    
     
     
@@ -79,24 +83,44 @@ invent = dir(fullfile(PathName,'*.txt'));
 % like afm data files
 FileName = {invent.name};
 relevant = strfind(FileName,'force-save-');
-irrelevant = find(cellfun(@isempty,relevant));
+relevant2 = strfind(FileName,'map-data-');
+relevance = [find(cellfun(@isempty,relevant)) find(cellfun(@isempty,relevant2))];
+%The following lines are to identify non-unique numbers in 'relevance' 
+%which are the indices in FileName that contain neither force-save- or map-data-
+n=length(relevance);
+[~,IA,~] = unique(relevance);
+irrelevant = unique(relevance(setdiff((1:n),IA)));
+% irrelevant files removed from list
 FileName(irrelevant) = [];
+clear invent relevant relevant2 irrelevant relevance
 
-    
 %% get the necessary inputs
-existsd = exist('d:\','dir');
-if existsd == 0
-    fprintf('WARNING: D: does not exist. Logfile cannot be written\n');
-    m=input('Do you want to continue, Y/N [Y]:','s');
-    if m=='N' | m=='n'
-       return       
+opsys = computer;
+if strcmp(opsys, 'PCWIN64') == 1 || strcmp(opsys, 'MACI64') == 1
+  log_file = fullfile(userpath,'batchforce_log - DO NOT MOVE.csv');
+elseif strcmp(opsys, 'GLNXA64') == 1
+  log_file = '/media/kflab/New Volume/batchforce_log - DO NOT MOVE.csv';
+%elseif strcmp(opsys, 'MACI64') == 1
+%  log_file = '~/Documents/MATLAB/batchforce_log - DO NOT MOVE.csv';
+else warndlg('Not sure what weird operating system you are using, man!')
+end
+existsd = exist(log_file);
+[log_folder,~,~] = fileparts(log_file);
+existsfolder = exist(log_folder, 'dir');
+if existsfolder == 7
+    if existsd == 0
+        fprintf("WARNING: There doesn’t seem to be a log file yet. A new log file will be written here: %s\n",log_folder);
+        %fprintf(log_file)
+        fid = fopen(log_file,'w');
+        fid = fclose(fid);
     end
 else
-    while strcmp('YourNameHere',log_user) == 1 | strcmp('',log_user) == 1
-        log_user = input('Please enter username for logfile >','s');
-    end
+    fprintf("WARNING: The folder %s does not exist. The logfile will not be written\n",log_folder);
 end
-
+existsd = exist(log_file);
+if nargin ~= ExpectedArgs
+    log_user = input('Please enter username for logfile >','s');
+end
 log_userinput = {};
 if nargin ~= ExpectedArgs
     beadradius = input('Beadradius in nm >');
@@ -143,7 +167,7 @@ elseif specialSelect == 2
     end
 elseif specialSelect == 1
     if nargin ~= ExpectedArgs
-        crop = input('How should batchforce handle indentations that are greater then R/3? \nTo warn and continue enter w\nTo crop and re-fit enter c\n>>>','s');
+        crop = input('How should batchforce handle indentations that are greater than R/3? \nTo warn and continue enter w\nTo crop and re-fit enter c\n>>>','s');
     end
     log_userinput{1,4} = crop;
     if strcmp('w',crop) == 1
@@ -280,7 +304,10 @@ for i = 1:e
                 % will be re-analysed after each removal of 'resolution' data points 
                 RESULTS(w,6) = GetHeaderValue(results,'bestcontactpointrms');
                 if local_indentation > beadradius/3 && crop_logical == 0 && w == 1
-                    fprintf('\nWarning: The indentation was more than is permitted by the Hertz model.\nApprox Progress:       ');
+                    fprintf('\nWarning: The indentation was more than is permitted by the Hertz model.');
+                    if resolution > 0
+                        fprintf('\nApprox Progress:       ');
+                    end
                 end
                 if local_indentation > beadradius/3 && crop_logical == 1
                     fprintf('\nThe indentation was more than is permitted: data cropped.\nApprox Progress:       ');
@@ -333,16 +360,77 @@ for i = 1:e
                 if w > 2
                     fprintf('\b\b\b\b\b\b\b');
                 end
-                fprintf(num2str(progress,'%06.2f'));
-                fprintf('%%');
+                if resolution > 0
+                    fprintf(num2str(progress,'%06.2f'));
+                    fprintf('%%');
+                end
             end
-            fprintf('\b\b\b\b\b\b\b');
+            if resolution > 0
+                fprintf('\b\b\b\b\b\b\b');
+            end
             fprintf('Done');
             filename = fullfile(PathName,[FileName{i}(1:end-4) '.mat']);
 
          if 1 == exist('RESULTS', 'var')
                 save(filename, 'RESULTS', '-mat')
             end
+            
+            contactpointindex = RESULTS(1,5);
+            
+            %% Split data into approach and forcecurve part, do corrections (copied from forcecurveanalysis.m, calling fitapproach.m)
+            numberofdatapoints = length(rawdata{1,3});
+            springConstant = GetHeaderValue(headerinfo,'springConstant');
+            % fit approach data to the best contactpoint
+            approachdata = [rawdata{1,3}(1:contactpointindex) rawdata{1,2}(1:contactpointindex)];
+            [approachfit] = fitapproach (approachdata);
+            approachfitcoefficients = coeffvalues(approachfit);
+            newapproachdata = [approachdata(:,1)-rawdata{1,3}(contactpointindex),approachdata(:,2)-approachfitcoefficients(1,1)*approachdata(:,1)-approachfitcoefficients(1,2)];
+            [approachfit] = fitapproach (newapproachdata);
+            % fit forcecurve data to the best contactpoint
+            forcecurvedata = [rawdata{1,3}(contactpointindex:numberofdatapoints,1) rawdata{1,2}(contactpointindex:numberofdatapoints,1)];
+            forcecurvedata = [(forcecurvedata(:,1)-rawdata{1,3}(contactpointindex)),forcecurvedata(:,2)-approachfitcoefficients(1,1)*forcecurvedata(:,1)-approachfitcoefficients(1,2)];
+            indentationdata = [forcecurvedata(:,1) + forcecurvedata(:,2)/springConstant, forcecurvedata(:,2)]; %akw48: Corrected indentation calculation
+            
+            indentationdata(:,1) = (-1)*indentationdata(:,1);
+            newapproachdata(:,1) = (-1).*newapproachdata(:,1);
+            
+            fullcurve = [newapproachdata;indentationdata];
+            
+            clear approachdata forcecurvedata numberofdatapoints
+            
+            %% Plot the corrected curve
+            figure('Position', [338,176,1114,754],'visible','off')
+            hold on
+            plot(fullcurve(:,1),fullcurve(:,2),'b','LineWidth',3)
+            scatter(fullcurve(contactpointindex,1),fullcurve(contactpointindex,2), 200,'.r')
+            
+            % Plot the Hertz fit
+            res = size(fullcurve,1)-contactpointindex; % number of samples
+            x = linspace(0,fullcurve(end,1),res);
+            x = x(:);
+            
+            y = (4/3).*RESULTS(1,3).*sqrt(beadradius.*x.^3);
+            
+            plot(x,y,'m','LineWidth',3);
+            clear res x y
+            
+            % Rescale axes and pretty up the plot
+            xt = get(gca, 'XTick');                                 % 'XTick' Values
+            set(gca, 'XTick', xt, 'XTickLabel', xt.*10^6)
+            
+            yt = get(gca, 'YTick');                                 % 'XTick' Values
+            set(gca, 'YTick', yt, 'YTickLabel', yt.*10^9)
+            
+            set(gca,'linewidth',1.5, 'fontsize', 14)
+            xlabel('Indentation [µm]','FontSize',14)
+            ylabel('Force [nN]','FontSize',14)
+            
+            %% Save the figure
+            saveas(gcf, fullfile(PathName, strcat(FileName{1,i}(1:end-3), 'png')), 'png') ;
+            close all;
+            
+            fclose('all');
+            
             clear('RESULTS', 'rawdata');
             if strcmp('w',crop) == 1
                 crop_logical = 0;
@@ -483,8 +571,8 @@ for i = 1:e
     
     % Write new line in log file:
     % Time file was analysed - batchforce: path, name, last modified - user name - curve which was analysed - user inputs in order and format given by user
-    if existsd == 7
-       fileID = fopen('D:\batchforce_log - DO NOT MOVE.csv','a');   % DO NOT CHANGE THIS UNLESS LOG FILE IS MOVED TO A DIFFERENT LOCATION!
+    if existsd == 2
+       fileID = fopen(log_file,'a');   % DO NOT CHANGE THIS UNLESS LOG FILE IS MOVED TO A DIFFERENT LOCATION!
        formatSpec = '%s\t%s\t%s\t%s';
        fprintf(fileID,formatSpec,timestamp,log_batchforceversion1, log_user,fileforlog{1,1});
        for log_counter = 1:size(log_userinput,2)-1
@@ -532,6 +620,9 @@ end
     %disp(MaxForceVector(counter))
     %disp(timestamp)
 fprintf('\nFinished.\n')
+disp(sprintf('Batchforce completed: %s  ',datestr(now)));
+
+diary off
 end
 %path = input(path)
 %beadsize = input(beadsize)
