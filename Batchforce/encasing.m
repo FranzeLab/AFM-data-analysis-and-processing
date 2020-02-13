@@ -55,8 +55,8 @@ for i = 1:size(PathName,1)
         inst_curr = length(mlb);
         if inst_curr < inst_aim + 1         % '+ 1' to include the instance which runs this script itself
             time = clock;
-            time = strcat(num2str(time(4)),':',num2str(time(5)));
-            disp(strcat("Starting instance number ", num2str(i), " at ", time, " for ", ui1))
+            time = strcat(num2str(time(4)),':',num2str(time(5),'%02d'));
+            disp(strcat("Starting instance ", num2str(i), " of ", num2str(size(PathName,1)), " at ", time, " for ", ui1))
                 break
         end
         pause(5)
@@ -65,6 +65,7 @@ for i = 1:size(PathName,1)
     save('instance_variables.mat','ui1','ui2','ui3','ui4','ui5','ui6', 'ui7')
     !matlab -nosplash -desktop -r "load instance_variables.mat;batchforce(ui1, ui2, ui3, ui4, ui5, ui6, ui7);exit" &
     pause(30)
+    commandwindow % Restores focus to this instance of Matlab
 end
 
 pause(30)

@@ -44,8 +44,6 @@ PathName = 0;
    
 if nargin == ExpectedArgs
     log_user = varargin{1};
-    diary(log_user)
-    disp(sprintf('Batchforce started: %s  ',datestr(now)));
     beadradius = str2num(varargin{2});
     weight_user_index = varargin{3};
     crop = varargin{4};
@@ -54,8 +52,6 @@ if nargin == ExpectedArgs
 elseif nargin == ExpectedArgs+1
     PathName = varargin{1};
     log_user = varargin{2};
-    diary(log_user)
-    disp(sprintf('Batchforce started: %s  ',datestr(now)));
     beadradius = str2num(varargin{3});
     weight_user_index = varargin{4};
     crop = varargin{5};
@@ -94,33 +90,32 @@ irrelevant = unique(relevance(setdiff((1:n),IA)));
 FileName(irrelevant) = [];
 clear invent relevant relevant2 irrelevant relevance
 
-%% get the necessary inputs
-opsys = computer;
-if strcmp(opsys, 'PCWIN64') == 1 || strcmp(opsys, 'MACI64') == 1
-  log_file = fullfile(userpath,'batchforce_log - DO NOT MOVE.csv')
-elseif strcmp(opsys, 'GLNXA64') == 1
-  log_file = '/media/kflab/New Volume/batchforce_log - DO NOT MOVE.csv';
-%elseif strcmp(opsys, 'MACI64') == 1
-%  log_file = '~/Documents/MATLAB/batchforce_log - DO NOT MOVE.csv';
-else warndlg('Not sure what weird operating system you are using, man!')
+
+% Default path for logfile
+log_file = fullfile(userpath,'batchforce_log - DO NOT MOVE.csv');
+
+% System specific checks for favoured log file locations
+if strcmp(computer, 'PCWIN64') == 1 && exist('D:\batchforce_log - DO NOT MOVE.csv') == 2
+    log_file= 'D:\batchforce_log - DO NOT MOVE.csv';
+elseif strcmp(computer, 'GLNXA64') == 1 && exist('/media/kflab/New Volume/batchforce_log - DO NOT MOVE.csv') == 2
+    log_file = '/media/kflab/New Volume/batchforce_log - DO NOT MOVE.csv';
 end
-if strcmp(opsys, 'PCWIN64') == 1 && exist('D:\batchforce_log - DO NOT MOVE.csv') == 2
-    log_file= 'D:\batchforce_log - DO NOT MOVE.csv'
-end
-existsd = exist(log_file);
+%Create diary file (command window log) in same location
 [log_folder,~,~] = fileparts(log_file);
-existsfolder = exist(log_folder, 'dir');
-if existsfolder == 7
-    if existsd == 0
-        fprintf("WARNING: There doesn’t seem to be a log file yet. A new log file will be written here: %s\n",log_folder);
-        %fprintf(log_file)
-        fid = fopen(log_file,'w');
-        fid = fclose(fid);
-    end
-else
-    fprintf("WARNING: The folder %s does not exist. The logfile will not be written\n",log_folder);
+diaryfile = strcat(log_user,'_CommandWindowOutput.txt');
+fullfile(log_folder,diaryfile);
+diary(fullfile(log_folder,diaryfile))
+disp(sprintf('\nBatchforce started: %s  ',datestr(now)));
+
+if exist(log_file) == 0 %Create log file if necessary
+    fprintf("WARNING: There doesn’t seem to be a log file yet. A new log file will be written here: %s\n",log_folder);
+    fid = fopen(log_file,'w');
+    fid = fclose(fid);
 end
-existsd = exist(log_file);
+
+fprintf("Analysing AFM data in the following folder:\n%s\n",PathName);
+
+%% get the necessary inputs
 if nargin ~= ExpectedArgs
     log_user = input('Please enter username for logfile >','s');
 end
@@ -247,7 +242,7 @@ for i = 1:e
     
     %% AMENDMENTS JULIA 13/01/20 START
     %% Read the force curve data and cut of 'bad' start and end
-    fprintf('\n %s (%d of %d)', FileName{1,i},filnum, e);
+    fprintf(' %s (%d of %d)', FileName{1,i},filnum, e);
     filnum = filnum +1;
     [rawdata,headerinfo] = Readfile(PathName,FileName(i));
     rawdata;
@@ -307,7 +302,7 @@ for i = 1:e
                 % will be re-analysed after each removal of 'resolution' data points 
                 RESULTS(w,6) = GetHeaderValue(results,'bestcontactpointrms');
                 if local_indentation > beadradius/3 && crop_logical == 0 && w == 1
-                    fprintf('\nWarning: The indentation was more than is permitted by the Hertz model.');
+                    fprintf('\nWarning: The indentation was more than is permitted by the Hertz model...   ');
                     if resolution > 0
                         fprintf('\nApprox Progress:       ');
                     end
@@ -371,7 +366,7 @@ for i = 1:e
             if resolution > 0
                 fprintf('\b\b\b\b\b\b\b');
             end
-            fprintf('Done');
+            fprintf('Done\n');
             filename = fullfile(PathName,[FileName{i}(1:end-4) '.mat']);
 
          if 1 == exist('RESULTS', 'var')
@@ -574,19 +569,17 @@ for i = 1:e
     
     % Write new line in log file:
     % Time file was analysed - batchforce: path, name, last modified - user name - curve which was analysed - user inputs in order and format given by user
-    if existsd == 2
-       fileID = fopen(log_file,'a');   % DO NOT CHANGE THIS UNLESS LOG FILE IS MOVED TO A DIFFERENT LOCATION!
-       formatSpec = '%s\t%s\t%s\t%s';
-       fprintf(fileID,formatSpec,timestamp,log_batchforceversion1, log_user,fileforlog{1,1});
-       for log_counter = 1:size(log_userinput,2)-1
-          formatSpec = '\t%s';
-          fprintf(fileID,formatSpec,log_userinput{1,log_counter});
-       end
-       log_counter = size(log_userinput,2);
-       formatSpec = '\t%s\n';
-       fprintf(fileID,formatSpec,log_userinput{1,log_counter});
-       fclose(fileID);
+    fileID = fopen(log_file,'a');   % DO NOT CHANGE THIS UNLESS LOG FILE IS MOVED TO A DIFFERENT LOCATION!
+    formatSpec = '%s\t%s\t%s\t%s';
+    fprintf(fileID,formatSpec,timestamp,log_batchforceversion1, log_user,fileforlog{1,1});
+    for log_counter = 1:size(log_userinput,2)-1
+        formatSpec = '\t%s';
+        fprintf(fileID,formatSpec,log_userinput{1,log_counter});
     end
+    log_counter = size(log_userinput,2);
+    formatSpec = '\t%s\n';
+    fprintf(fileID,formatSpec,log_userinput{1,log_counter});
+    fclose(fileID);
     %% fit curve with the contact point from analysis
     
         %% draw the graph
@@ -622,7 +615,6 @@ end
     %disp(i)
     %disp(MaxForceVector(counter))
     %disp(timestamp)
-fprintf('\nFinished.\n')
 disp(sprintf('Batchforce completed: %s  ',datestr(now)));
 
 diary off
