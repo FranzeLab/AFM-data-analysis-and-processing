@@ -64,8 +64,9 @@ for i = 1:size(PathName,1)
     
     save('instance_variables.mat','ui1','ui2','ui3','ui4','ui5','ui6', 'ui7')
     !matlab -nosplash -desktop -r "load instance_variables.mat;batchforce(ui1, ui2, ui3, ui4, ui5, ui6, ui7);exit" &
-    pause(30)
+    pause(25)
     commandwindow % Restores focus to this instance of Matlab
+    pause(5)
 end
 
 pause(30)
