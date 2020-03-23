@@ -245,7 +245,6 @@ for i = 1:e
     fprintf(' %s (%d of %d)', FileName{1,i},filnum, e);
     filnum = filnum +1;
     [rawdata,headerinfo] = Readfile(PathName,FileName(i));
-    rawdata;
     [vDefl, mHeight, number_rawdata_columns] = FindColumnsNeeded(headerinfo, 'vDeflection', 'measuredHeight'); % variables 'vDefl' and 'mHeight' used only in this cell, please change names according to rawdata columns you're looking for
     [time, ~, ~] = FindColumnsNeeded(headerinfo, 'seriesTime', 'measuredHeight'); % JB 13/01/20 line added to include time
     rawdata{vDefl} = smooth(rawdata{vDefl},10); % inserted by David 14/03/13, altered by Julia 23/10/18 to accommodate new variable
@@ -265,10 +264,7 @@ for i = 1:e
     %% this loop following finds the index of the point with minCP_value
     minCP_value = min([(max(rawdata{1,3}) - 2E-6) (min(rawdata{1,3}) + 2*beadradius)]); % the multiplication of bead radius by factor 2 changed David 14/03/13 
     minCP_index = 1;
-    length(rawdata{1,3});
-    rawdata{1,3}(minCP_index);
-    minCP_value;
-    if rawdata{1,3}(minCP_index) > minCP_value
+    if length(rawdata{1,3}) >= minCP_index && rawdata{1,3}(minCP_index) > minCP_value %first condition just checks that rawdata will have an entry at minCP so that the script doesn't break
         while (rawdata{1,3}(minCP_index) > minCP_value) && (minCP_index+1<length(rawdata{1,3})) % Included "&& (minCP_index+1>length(rawdata{1,3})" as ran into error if minCP_value was outside lookup range, Max and Julia 25/01/18 % corrected this to <, Julia 03/12/18
             minCP_index = minCP_index+1;
         end

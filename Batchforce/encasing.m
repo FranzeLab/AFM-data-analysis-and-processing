@@ -6,10 +6,10 @@
 % called 'files and labfiles' and open a matlab instance for each running 
 % batchforce in each instance. Consider the speed of your computer before 
 % running.
+% Alex Winkel 27/2/20 - it now prompts for a start (date&) time
 
 clear variables
 close all
-
 %% Let user choose which folder to read
 uiwait(msgbox(sprintf("Select the overarching folder you want to analyse.\n\n All 'files and labfile' folders inside this folder will be searched for force-save-***.txt files for analysis.")))
 PathName_big = uigetdir('/Users/julia/OneDrive - University Of Cambridge/Julia/Dokumente/Studium/Cambridge/PhD/PhD/PhD Franze lab/Data and results/AFM/WT measurements/', 'Select the overarching section folder (#XX_XX)');
@@ -36,6 +36,29 @@ OS = computer;
 %%
 format shortg
 
+%%
+starttime_input=input('Please choose a (date &) time for the first instance to start\ne.g. to start today at 5:30PM enter 17:30\n     to start at half past midnight on 29/2/2020 enter "29-Feb-2020 00:30" (without quotes) \n     to start straight away enter 0\n> ','s');
+wait = 0;
+if strcmp(starttime_input,'0') == 0
+    if length(strsplit(starttime_input,' ')) == 1
+        startdatetime = strcat(date," ",starttime_input);
+        wait = seconds(startdatetime - datetime);
+    elseif length(strsplit(starttime_input,' ')) == 2
+        startdatetime = starttime_input;
+        wait = seconds(startdatetime - datetime);
+    else
+        fprintf('I do not understand your date/time. Waiting 5 minutes.\n')
+        wait = (300);
+    end
+end
+if wait > 0
+    fprintf('Waiting until %s\n', starttime_input);
+    pause(wait);
+elseif wait < 0
+    fprintf('%s is in the past. Starting immediately\n', starttime_input);
+end
+
+%%
 for i = 1:size(PathName,1)
     ui1 = PathName{i,1};
         
