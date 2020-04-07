@@ -30,7 +30,7 @@ ui4 = 'n';
 ui5 = 'w';
 ui6 = '1';
 %ui7 = '0';
-ui7 = input('How many nN should be snipped with each iteration e.g. "2"? \nOptional: also how many iterations (e.g. "2 5")\nTo do only one fit over the whole data set, choose "0".\n(Without quotes)\n>>>','s');
+ui7 = input('How many nN should be snipped with each iteration e.g. "2"? \nOptional: also how many snips (e.g. "2 5")\nTo do only one fit over the whole data set, choose "0".\n(Without quotes)\n>>>','s');
 
 % ui1 = PathName, ui2 = log_user, ui3 = beadradius, ui4 = weight_user_index, ui5 = crop or warn if indentation exceeds 1/3 bead radius, ui6 = specialSelect, ui7 = resolution 
 

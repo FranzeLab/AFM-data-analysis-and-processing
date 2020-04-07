@@ -190,13 +190,13 @@ elseif specialSelect == 1
         error('no valid input')
     end
     if nargin ~= ExpectedArgs
-        resolution = input('How many nN should be snipped with each iteration e.g. "2"? \nOptional: also how many iterations (e.g. "2 5")\nTo do only one fit over the whole data set, choose "0".\n(Without quotes)\n>>>','s');
+        resolution = input('How many nN should be snipped with each iteration e.g. "2"? \nOptional: also how many snips (e.g. "2 5")\nTo do only one fit over the whole data set, choose "0".\n(Without quotes)\n>>>','s');
         resolution = str2num(resolution);
     end
     log_userinput{1,5} = num2str(resolution);
     maxw = 1000; %If you want more than 1000 snips you will wait for a VERY long time
     if length(resolution) == 2
-        maxw = resolution(2);
+        maxw = resolution(2)+1; %This means it will do the number of snips specified, one extra line in the .mat file'
         resolution = resolution(1);
     end
     if length(resolution) ~= 1
