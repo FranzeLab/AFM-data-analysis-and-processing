@@ -17,7 +17,7 @@ loop2res = round(numberofdatapoints()/1000,0);
 Minpoints = round(0.04*numberofdatapoints(),0);
 %Minpoints = 10;
 loop1res = 1;
-loopres2 = 1;
+loop2res = 1;
 
 if (loop==1)
     checkindices = contactpointindex:15*loop1res:numberofdatapoints-20*loop1res; 
@@ -62,14 +62,13 @@ for i = 1:counter
         end
     elseif (length(indentationdata)<=Minpoints)
         Hertzfitqualitycell{5,1} = NaN;
- %       fprintf('*');
     end
     %% fill quality matrix
     contactpointquality(contactpointindex,1) = contactpointindex;
  %   contactpointquality(contactpointindex,2) = approachfitqualitycell{5,1};
  %   contactpointquality(contactpointindex,3) = Hertzfitqualitycell{5,1};
     %AKW: batchfoce struggles with the lines above for steep curves which
-    %use rmse errors for both herts and contact point fit (later summed and
+    %use rmse errors for both hertz and contact point fit (later summed and
     %minimised). The below looks at the total sum of the squared error
     %(sse) which is a better thing to minimise
     contactpointquality(contactpointindex,2) = approachfitqualitycell{1,1};
