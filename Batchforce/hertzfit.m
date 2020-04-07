@@ -1,5 +1,6 @@
 function [Hertzfit,Hertzfitquality] = hertzfit(indentationdata)
 % makes a fit to the indentationdata
+fprintf(char(176)); %cosmetic for command window together with \b below
 fitdata = indentationdata;
 indentationdatapoints = length(indentationdata);
 Weights = ones(indentationdatapoints,1);
@@ -26,5 +27,6 @@ while q==1
     else
           error('error at hertzfit badcp elimination')
     end
-   
+  
 end
+fprintf('\b'); %cosmetic for command window together with char(176) above

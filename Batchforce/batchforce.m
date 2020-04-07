@@ -1,5 +1,9 @@
 
 function batchforce(varargin)
+
+%% Work in progress: make a version of batchforce that enables snipping of 
+%% setpoint
+
 %% batchforce analyzes a batch of force curves obtained with a colloidal
 %% probe. The model used is the Hertz-model (assuming a paraboloid indenter
 %% rather than a spherical one). The program requires the force curves to
@@ -32,6 +36,16 @@ function batchforce(varargin)
 % eg batchforce Alex 18640 n w 1 0
 % contactpointfit changed to use sse instead of rmse which is much better 
 % for steep curves
+% April 2020: 
+% Found and fixed a typo in contactpoint fit that would casue
+% the software to throw errors if there were fewer than 500 data points
+% Changed fixed number of data point snipping to a force snip amount (so
+% resolution is now a value in nN rather than a number of data points).
+% Also it is now possible to specify a number of times the data should be
+% snipped. Be careful to use ' so for resolution enter e.g. '10 5' instead
+% of 10 if you want only 5 lines in your results file (and much 
+% faster analysis). '10 5' means the data will be snipped by 10nN 4 times,
+% so that the total number of lines is 5.
 
 
 
@@ -78,17 +92,17 @@ invent = dir(fullfile(PathName,'*.txt'));
 % Make a cell containing all filenames, not including those that don't look
 % like afm data files
 FileName = {invent.name};
-relevant = strfind(FileName,'force-save-');
-relevant2 = strfind(FileName,'map-data-');
-relevance = [find(cellfun(@isempty,relevant)) find(cellfun(@isempty,relevant2))];
+% relevant = strfind(FileName,'force-save-');
+% relevant2 = strfind(FileName,'map-data-');
+% relevance = [find(cellfun(@isempty,relevant)) find(cellfun(@isempty,relevant2))];
 %The following lines are to identify non-unique numbers in 'relevance' 
 %which are the indices in FileName that contain neither force-save- or map-data-
-n=length(relevance);
-[~,IA,~] = unique(relevance);
-irrelevant = unique(relevance(setdiff((1:n),IA)));
-% irrelevant files removed from list
-FileName(irrelevant) = [];
-clear invent relevant relevant2 irrelevant relevance
+% n=length(relevance);
+% [~,IA,~] = unique(relevance);
+% irrelevant = unique(relevance(setdiff((1:n),IA)));
+% % irrelevant files removed from list
+% FileName(irrelevant) = [];
+% clear invent relevant relevant2 irrelevant relevance
 
 
 % Default path for logfile
@@ -176,9 +190,20 @@ elseif specialSelect == 1
         error('no valid input')
     end
     if nargin ~= ExpectedArgs
-        resolution = input('Every how many data points should a fit be performed?\nWARNING: A too small value may make the calculation take forever.\nFor a 1000 data point force curves 7 may be reasonable.\nBecause of certain parts of the algorithm the number should be below 20.\nTo do only one fit over the whole data set, choose 0.\n>>>');
+        resolution = input('How many nN should be snipped with each iteration e.g. "2"? \nOptional: also how many iterations (e.g. "2 5")\nTo do only one fit over the whole data set, choose "0".\n(Without quotes)\n>>>','s');
+        resolution = str2num(resolution);
     end
     log_userinput{1,5} = num2str(resolution);
+    maxw = 1000; %If you want more than 1000 snips you will wait for a VERY long time
+    if length(resolution) == 2
+        maxw = resolution(2);
+        resolution = resolution(1);
+    end
+    if length(resolution) ~= 1
+        error('no valid input')
+    end
+   
+        
     forceInput = 0;
     indentationInput = 0.01*beadradius; %Changed original 0.03 to 0.01
     assumedCP = 0;
@@ -242,47 +267,56 @@ for i = 1:e
     
     %% AMENDMENTS JULIA 13/01/20 START
     %% Read the force curve data and cut of 'bad' start and end
-    fprintf(' %s (%d of %d)', FileName{1,i},filnum, e);
+    fprintf('%s (%d of %d) ', FileName{1,i},filnum, e);
     filnum = filnum +1;
-    [rawdata,headerinfo] = Readfile(PathName,FileName(i));
-    [vDefl, mHeight, number_rawdata_columns] = FindColumnsNeeded(headerinfo, 'vDeflection', 'measuredHeight'); % variables 'vDefl' and 'mHeight' used only in this cell, please change names according to rawdata columns you're looking for
-    [time, ~, ~] = FindColumnsNeeded(headerinfo, 'seriesTime', 'measuredHeight'); % JB 13/01/20 line added to include time
-    rawdata{vDefl} = smooth(rawdata{vDefl},10); % inserted by David 14/03/13, altered by Julia 23/10/18 to accommodate new variable
-    rawdata = CleanData(rawdata, vDefl, mHeight, time); % JB 13/01/20 line amended to include time
-    
-    % log value of variables vDefl and mHeight
-    name = fullfile(PathName,'Log_vDefl_mHeight_values.txt');
-    variables = strjoin({'vDefl', num2str(vDefl), 'mHeight', num2str(mHeight), 'seriesTime', num2str(time)},'\t'); % JB 13/01/20 line amended to include time
-    %% AMENDMENTS JULIA 13/01/20 END
-    
-    fid = fopen(name, 'at');
-    fprintf(fid, '%38s\t%s\n', FileName{1,i}, variables);
-    fclose(fid);
-    clear vDefl mHeight name variables fid
-    
-    
-    %% this loop following finds the index of the point with minCP_value
-    minCP_value = min([(max(rawdata{1,3}) - 2E-6) (min(rawdata{1,3}) + 2*beadradius)]); % the multiplication of bead radius by factor 2 changed David 14/03/13 
-    minCP_index = 1;
-    if length(rawdata{1,3}) >= minCP_index && rawdata{1,3}(minCP_index) > minCP_value %first condition just checks that rawdata will have an entry at minCP so that the script doesn't break
-        while (rawdata{1,3}(minCP_index) > minCP_value) && (minCP_index+1<length(rawdata{1,3})) % Included "&& (minCP_index+1>length(rawdata{1,3})" as ran into error if minCP_value was outside lookup range, Max and Julia 25/01/18 % corrected this to <, Julia 03/12/18
-            minCP_index = minCP_index+1;
+    try
+        [rawdata,headerinfo] = Readfile(PathName,FileName(i));
+        [vDefl, mHeight, number_rawdata_columns] = FindColumnsNeeded(headerinfo, 'vDeflection', 'measuredHeight'); % variables 'vDefl' and 'mHeight' used only in this cell, please change names according to rawdata columns you're looking for
+        [time, ~, ~] = FindColumnsNeeded(headerinfo, 'seriesTime', 'measuredHeight'); % JB 13/01/20 line added to include time
+        rawdata{vDefl} = smooth(rawdata{vDefl},10); % inserted by David 14/03/13, altered by Julia 23/10/18 to accommodate new variable
+        rawdata = CleanData(rawdata, vDefl, mHeight, time); % JB 13/01/20 line amended to include time
+
+        % log value of variables vDefl and mHeight
+    %    name = fullfile(PathName,'Log_vDefl_mHeight_values.txt');
+        name = fullfile(PathName,'Log_vDefl_mHeight_values.log');
+        variables = strjoin({'vDefl', num2str(vDefl), 'mHeight', num2str(mHeight), 'seriesTime', num2str(time)},'\t'); % JB 13/01/20 line amended to include time
+        %% AMENDMENTS JULIA 13/01/20 END
+
+        fid = fopen(name, 'at');
+        fprintf(fid, '%38s\t%s\n', FileName{1,i}, variables);
+        fclose(fid);
+        clear vDefl mHeight name variables fid
+
+
+        %% this loop following finds the index of the point with minCP_value
+        minCP_value = min([(max(rawdata{1,3}) - 2E-6) (min(rawdata{1,3}) + 2*beadradius)]); % the multiplication of bead radius by factor 2 changed David 14/03/13 
+        minCP_index = 1;
+        if length(rawdata{1,3}) >= minCP_index && rawdata{1,3}(minCP_index) > minCP_value %first condition just checks that rawdata will have an entry at minCP so that the script doesn't break
+            while (rawdata{1,3}(minCP_index) > minCP_value) && (minCP_index+1<length(rawdata{1,3})) % Included "&& (minCP_index+1>length(rawdata{1,3})" as ran into error if minCP_value was outside lookup range, Max and Julia 25/01/18 % corrected this to <, Julia 03/12/18
+                minCP_index = minCP_index+1;
+            end
         end
+
+        %% actual calculation of force curve fit for one particular curve
+        local_indentation = 15000E-9;
+        local_CP_index = minCP_index + 1;
+    catch err %err is an MException struct
+        fprintf(' - Skipped. Does not appear to be AFM data\n');
+        continue
     end
     
-    %% actual calculation of force curve fit for one particular curve
-    local_indentation = 15000E-9;
-    local_CP_index = minCP_index + 1;
+        
     if specialSelect == 1
-        steps = round(length(rawdata{1,3})/resolution,0);
-        progress = 0;
-        fprintf(' - ');
-     %   fprintf(num2str(progress,'%05.2f'));
-     %   fprintf('%%');
         w=1;
         mod = 2;
-        try
-            while (minCP_index < local_CP_index) && w > 0 && mod > 1
+         try
+            maxdefl = 4*resolution*1e-9;
+            new_end2 = length(rawdata{1,1});
+            origrawdata = rawdata;
+            printwarninglater = 0;
+            while (minCP_index < local_CP_index) && w > 0 && mod > 1 && local_CP_index < length(rawdata{1,1})
+              %  local_CP_index
+              %  length(rawdata{1,1}) 
                 results = forcecurveanalysis(rawdata,headerinfo,userInput,minCP_index,w,local_CP_index);
                 local_indentation = GetHeaderValue(results,'indentation');
                 mod = GetHeaderValue(results,'modulus');
@@ -298,10 +332,7 @@ for i = 1:e
                 % will be re-analysed after each removal of 'resolution' data points 
                 RESULTS(w,6) = GetHeaderValue(results,'bestcontactpointrms');
                 if local_indentation > beadradius/3 && crop_logical == 0 && w == 1
-                    fprintf('\nWarning: The indentation was more than is permitted by the Hertz model...   ');
-                    if resolution > 0
-                        fprintf('\nApprox Progress:       ');
-                    end
+                    printwarninglater = 1; % this is just cosmetic for the command window
                 end
                 if local_indentation > beadradius/3 && crop_logical == 1
                     fprintf('\nThe indentation was more than is permitted: data cropped.\nApprox Progress:       ');
@@ -338,37 +369,68 @@ for i = 1:e
                 [pos_x, pos_y] = FindCoordinates(headerinfo);
                 RESULTS(w,9) = pos_x;
                 RESULTS(w,10) = pos_y;
-
-                rawdata = {rawdata{1,1}(1:end-resolution) rawdata{1,2}(1:end-resolution) rawdata{1,3}(1:end-resolution)};
-                if w == 1
-                    local_CP_index;
-                    steps = round((length(rawdata{1,3})-local_CP_index)/resolution,0);
-                    local_CP_index;
-                end
-                progress= round(100*w/steps,2);
                 if resolution > 0
-                    w=w+1;
+                    if maxdefl > 3*resolution*1e-9
+                        numberofdatapoints = length(rawdata{1,3});
+                        springConstant = GetHeaderValue(headerinfo,'springConstant');
+                        % fit approach data to the best contactpoint
+                        approachdata = [rawdata{1,3}(1:RESULTS(w,5)) rawdata{1,2}(1:RESULTS(w,5))];
+                        [approachfit] = fitapproach (approachdata);
+                        approachfitcoefficients = coeffvalues(approachfit);
+
+                        newapproachdata = [approachdata(:,1)-rawdata{1,3}(RESULTS(w,5)),approachdata(:,2)-approachfitcoefficients(1,1)*approachdata(:,1)-approachfitcoefficients(1,2)];
+                        [approachfit] = fitapproach (newapproachdata);
+                        % fit forcecurve data to the best contactpoint
+                        forcecurvedata = [rawdata{1,3}(RESULTS(w,5):numberofdatapoints,1) rawdata{1,2}(RESULTS(w,5):numberofdatapoints,1)];
+
+                        forcecurvedata = [(forcecurvedata(:,1)-rawdata{1,3}(RESULTS(w,5))),forcecurvedata(:,2)-approachfitcoefficients(1,1)*forcecurvedata(:,1)-approachfitcoefficients(1,2)];
+                        fullcurve = [newapproachdata;forcecurvedata];
+                        maxdefl = max(forcecurvedata(:,2));
+                        target = maxdefl -(resolution*1e-9);
+                        last_end2 = new_end2;
+                        [new_end2,~]= find(fullcurve(:,2) > target,1) ;
+                        if new_end2 > length(rawdata{1,1})
+                            w = -1;
+                        else
+                            rawdata = {rawdata{1,1}(1:new_end2) rawdata{1,2}(1:new_end2) rawdata{1,3}(1:new_end2)};
+                        end
+                        w=w+1;
+                        fprintf(char(176));
+                        %fprintf('\nmaxdefl %f, snipping %i data points leaving %i', maxdefl*1e9,last_end2-new_end2,new_end2); %useful line for testing
+                        if w > maxw
+                            w = 0;
+                        end
+                        if new_end2>=last_end2
+                            w = 0;
+                            fprintf('\n Warning: The %gnN snip was too small to reduce the number of data points.     ',resolution);
+                        end
+                        if new_end2 < 101
+                            w = 0;
+                            fprintf('\n Warning: The %gnN snip was too big for this data file.     ',resolution);
+                        end
+                    else
+                        w = 0; 
+                    end
                 else
                     w = 0;
                 end
-                if w > 2
-                    fprintf('\b\b\b\b\b\b\b');
-                end
-                if resolution > 0
-                    fprintf(num2str(progress,'%06.2f'));
-                    fprintf('%%');
-                end
             end
-            if resolution > 0
-                fprintf('\b\b\b\b\b\b\b');
+         catch err %err is an MException struct
+             fprintf('FAILED - SKIPPED!');
+             fprintf(1,'\n%s\n',err.message);
+         end
+        try
+            if printwarninglater == 1
+                fprintf('\n Warning: The indentation was more than is permitted by the Hertz model   ');
             end
-            fprintf('Done\n');
+            fprintf(' - Done\n');
             filename = fullfile(PathName,[FileName{i}(1:end-4) '.mat']);
 
-         if 1 == exist('RESULTS', 'var')
+            if 1 == exist('RESULTS', 'var')
                 save(filename, 'RESULTS', '-mat')
             end
             
+            rawdata = origrawdata;
             contactpointindex = RESULTS(1,5);
             
             %% Split data into approach and forcecurve part, do corrections (copied from forcecurveanalysis.m, calling fitapproach.m)
@@ -384,7 +446,6 @@ for i = 1:e
             forcecurvedata = [rawdata{1,3}(contactpointindex:numberofdatapoints,1) rawdata{1,2}(contactpointindex:numberofdatapoints,1)];
             forcecurvedata = [(forcecurvedata(:,1)-rawdata{1,3}(contactpointindex)),forcecurvedata(:,2)-approachfitcoefficients(1,1)*forcecurvedata(:,1)-approachfitcoefficients(1,2)];
             indentationdata = [forcecurvedata(:,1) + forcecurvedata(:,2)/springConstant, forcecurvedata(:,2)]; %akw48: Corrected indentation calculation
-            
             indentationdata(:,1) = (-1)*indentationdata(:,1);
             newapproachdata(:,1) = (-1).*newapproachdata(:,1);
             
@@ -402,8 +463,11 @@ for i = 1:e
             res = size(fullcurve,1)-contactpointindex; % number of samples
             x = linspace(0,fullcurve(end,1),res);
             x = x(:);
-            
             y = (4/3).*RESULTS(1,3).*sqrt(beadradius.*x.^3);
+          %  y =
+          %  (4/3).*RESULTS(1,3).*sqrt(beadradius.*x.^3)+fullcurve(contactpointindex,2);
+          %  Idea for later: shift fit on Y axis so that it starts on CP,
+          %  but maybe this should be done before fitting?
             
             plot(x,y,'m','LineWidth',3);
             clear res x y

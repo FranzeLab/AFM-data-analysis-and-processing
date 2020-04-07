@@ -7,6 +7,8 @@
 % batchforce in each instance. Consider the speed of your computer before 
 % running.
 % Alex Winkel 27/2/20 - it now prompts for a start (date&) time
+% Alex Winkel 7/4/20 - It now prompts for resolution so that the user can
+% choose to do force snipping
 
 clear variables
 close all
@@ -27,7 +29,9 @@ ui3 = input('Beadradius in nm > ','s');
 ui4 = 'n';
 ui5 = 'w';
 ui6 = '1';
-ui7 = '0';
+%ui7 = '0';
+ui7 = input('How many nN should be snipped with each iteration e.g. "2"? \nOptional: also how many iterations (e.g. "2 5")\nTo do only one fit over the whole data set, choose "0".\n(Without quotes)\n>>>','s');
+
 % ui1 = PathName, ui2 = log_user, ui3 = beadradius, ui4 = weight_user_index, ui5 = crop or warn if indentation exceeds 1/3 bead radius, ui6 = specialSelect, ui7 = resolution 
 
 inst_aim = input('How many batchforce instances do you want to run in parallel? Consider the capabilities of your machine! > ');
