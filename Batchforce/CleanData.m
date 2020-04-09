@@ -8,7 +8,7 @@ if (~isempty(q))
 else
     w = 1;
 end
-[maxrawdata,maxrawdataindex] = max(orgrawdata{1,column1_index});
+[~,maxrawdataindex] = max(orgrawdata{1,column1_index});
 rawdata{1,3} = orgrawdata{1,column2_index}(w:maxrawdataindex);
 rawdata{1,2} = orgrawdata{1,column1_index}(w:maxrawdataindex);
 rawdata{1,1} = orgrawdata{1,column3_index}(w:maxrawdataindex);

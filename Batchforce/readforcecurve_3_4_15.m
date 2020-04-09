@@ -20,7 +20,7 @@ end
 fseek(forcefile,0,'bof');
 header = textscan(forcefile, '%[^\n]',...
     headerline_counter);
-[rubbish, column_row] = GetHeaderValue(header,'columns');
+[~, column_row] = GetHeaderValue(header,'columns');
 columns_row_size = size(column_row);
 column_number = columns_row_size(1) - 2;
 fseek(forcefile,1,0);

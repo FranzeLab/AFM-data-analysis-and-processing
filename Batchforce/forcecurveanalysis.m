@@ -10,7 +10,8 @@ springConstant = GetHeaderValue(headerinfo,'springConstant');
 
 if minCP_index < 100
     contactpointindex =100;
-else contactpointindex=minCP_index;
+else
+    contactpointindex=minCP_index;
 end
 % this for loop serves the sole purpose of reducing runtime by having a
 % first go with only each 20th data point considered and than doing a
@@ -51,8 +52,9 @@ end
 approachdata = [rawdata{1,3}(1:contactpointindex) rawdata{1,2}(1:contactpointindex)];
 [approachfit] = fitapproach (approachdata);
 approachfitcoefficients = coeffvalues(approachfit);
-newapproachdata = [approachdata(:,1)-rawdata{1,3}(contactpointindex),approachdata(:,2)-approachfitcoefficients(1,1)*approachdata(:,1)-approachfitcoefficients(1,2)];
-[approachfit] = fitapproach (newapproachdata);
+%newapproachdata = [approachdata(:,1)-rawdata{1,3}(contactpointindex),approachdata(:,2)-approachfitcoefficients(1,1)*approachdata(:,1)-approachfitcoefficients(1,2)];
+%[approachfit] = fitapproach (newapproachdata); AKW: These lines of I guess
+%Andreas' seem not to do anything. Hence commented out
 %% fit forcecurve data to the best contactpoint
 forcecurvedata = [rawdata{1,3}(contactpointindex:numberofdatapoints,1) rawdata{1,2}(contactpointindex:numberofdatapoints,1)];
 forcecurvedata = [(forcecurvedata(:,1)-rawdata{1,3}(contactpointindex)),forcecurvedata(:,2)-approachfitcoefficients(1,1)*forcecurvedata(:,1)-approachfitcoefficients(1,2)];
@@ -63,9 +65,9 @@ force = max(indentationdata(:,2));
 
 weight_user_index = GetHeaderValue(userInput,'weight_user_index');
 if weight_user_index == 1
-    [Hertzfit,Hertzfitquality] = weighedhertzfit(indentationdata);
+    [Hertzfit,~] = weighedhertzfit(indentationdata);
 elseif weight_user_index == 0
-    [Hertzfit,Hertzfitquality] = hertzfit(indentationdata);
+    [Hertzfit,~] = hertzfit(indentationdata);
 end
 
 %% Calculate results

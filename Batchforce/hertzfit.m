@@ -9,7 +9,7 @@ while q==1
     Hertzmodel = fittype({'real(x.^(3/2))'},'coefficients','Hertzfactor');
     hertzoptions = fitoptions('Method', 'LinearLeastSquares','Weights',Weights);
 
-    [Hertzfit,Hertzfitquality,Hertzfitoutput] = fit(fitdata(:,1),fitdata(:,2),Hertzmodel,hertzoptions);
+    [Hertzfit,Hertzfitquality,~] = fit(fitdata(:,1),fitdata(:,2),Hertzmodel,hertzoptions);
     
     w = feval(Hertzfit,fitdata(:,1));
     difference = (w-fitdata(:,2)).^2;

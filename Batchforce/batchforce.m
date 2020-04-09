@@ -58,18 +58,18 @@ PathName = 0;
    
 if nargin == ExpectedArgs
     log_user = varargin{1};
-    beadradius = str2num(varargin{2});
+    beadradius = str2double(varargin{2});
     weight_user_index = varargin{3};
     crop = varargin{4};
-    specialSelect = str2num(varargin{5});
+    specialSelect = str2double(varargin{5});
     resolution = str2num(varargin{6});
 elseif nargin == ExpectedArgs+1
     PathName = varargin{1};
     log_user = varargin{2};
-    beadradius = str2num(varargin{3});
+    beadradius = str2double(varargin{3});
     weight_user_index = varargin{4};
     crop = varargin{5};
-    specialSelect = str2num(varargin{6});
+    specialSelect = str2double(varargin{6});
     resolution = str2num(varargin{7});
     ExpectedArgs = ExpectedArgs+1;
 
@@ -109,9 +109,9 @@ FileName = {invent.name};
 log_file = fullfile(userpath,'batchforce_log - DO NOT MOVE.csv');
 
 % System specific checks for favoured log file locations
-if strcmp(computer, 'PCWIN64') == 1 && exist('D:\batchforce_log - DO NOT MOVE.csv') == 2
+if strcmp(computer, 'PCWIN64') == 1 && exist('D:\batchforce_log - DO NOT MOVE.csv','file') == 2
     log_file= 'D:\batchforce_log - DO NOT MOVE.csv';
-elseif strcmp(computer, 'GLNXA64') == 1 && exist('/media/kflab/New Volume/batchforce_log - DO NOT MOVE.csv') == 2
+elseif strcmp(computer, 'GLNXA64') == 1 && exist('/media/kflab/New Volume/batchforce_log - DO NOT MOVE.csv','file') == 2
     log_file = '/media/kflab/New Volume/batchforce_log - DO NOT MOVE.csv';
 end
 %Create diary file (command window log) in same location
@@ -119,9 +119,9 @@ end
 diaryfile = strcat(log_user,'_CommandWindowOutput.txt');
 fullfile(log_folder,diaryfile);
 diary(fullfile(log_folder,diaryfile))
-disp(sprintf('\nBatchforce started: %s  ',datestr(now)));
+fprintf('\nBatchforce started: %s  \n',datestr(now));
 
-if exist(log_file) == 0 %Create log file if necessary
+if exist(log_file,'file') == 0 %Create log file if necessary
     fprintf("WARNING: There doesn’t seem to be a log file yet. A new log file will be written here: %s\n",log_folder);
     fid = fopen(log_file,'w');
     fid = fclose(fid);
@@ -164,7 +164,8 @@ if specialSelect == 3
     log_userinput{1,5} = num2str(assumedCP);
     if assumedCP == 0
         detailedRun = 0;
-    else detailedRun = 1;
+    else
+        detailedRun = 1;
     end
 elseif specialSelect == 2
     indentationInput = input('To which indentation in microns do you want to analyze?>>');
@@ -175,7 +176,8 @@ elseif specialSelect == 2
     log_userinput{1,5} = num2str(assumedCP);
     if assumedCP == 0
         detailedRun = 0;
-    else detailedRun = 1;
+    else
+        detailedRun = 1;
     end
 elseif specialSelect == 1
     if nargin ~= ExpectedArgs
@@ -230,7 +232,7 @@ elseif specialSelect == 4
 elseif specialSelect == 5
     [analyzed_file_name, analyzed_path_name, analyzed_filter_index] = ...
         uigetfile({'*.mat','analyzed curves'},...
-        'Select curve','C:\ac563\work\measurementdata\test\',...
+        'Select results file','C:\ac563\work\measurementdata\test\',...
         'MultiSelect','on');
     q = iscell(analyzed_file_name);
     if (q == 0)
@@ -249,7 +251,6 @@ elseif specialSelect == 5
 else
     fprintf('invalid input')
 end
-deletePoints = 0;
 
 space = ' ';
 userInput{1} = {['beadradius' space num2str(beadradius)];...
@@ -261,17 +262,17 @@ userInput{1} = {['beadradius' space num2str(beadradius)];...
     ['weight_user_index' space num2str(weight_user_index)]};
 
 %% iteration over all files
-[w,e] =  size(FileName);
+[~,e] =  size(FileName);
 filnum = 1;
 for i = 1:e
     
     %% AMENDMENTS JULIA 13/01/20 START
     %% Read the force curve data and cut of 'bad' start and end
-    fprintf('%s (%d of %d) ', FileName{1,i},filnum, e);
+    fprintf('temp  %s (%d of %d) ', FileName{1,i},filnum, e);
     filnum = filnum +1;
     try
         [rawdata,headerinfo] = Readfile(PathName,FileName(i));
-        [vDefl, mHeight, number_rawdata_columns] = FindColumnsNeeded(headerinfo, 'vDeflection', 'measuredHeight'); % variables 'vDefl' and 'mHeight' used only in this cell, please change names according to rawdata columns you're looking for
+        [vDefl, mHeight, ~] = FindColumnsNeeded(headerinfo, 'vDeflection', 'measuredHeight'); % variables 'vDefl' and 'mHeight' used only in this cell, please change names according to rawdata columns you're looking for
         [time, ~, ~] = FindColumnsNeeded(headerinfo, 'seriesTime', 'measuredHeight'); % JB 13/01/20 line added to include time
         rawdata{vDefl} = smooth(rawdata{vDefl},10); % inserted by David 14/03/13, altered by Julia 23/10/18 to accommodate new variable
         rawdata = CleanData(rawdata, vDefl, mHeight, time); % JB 13/01/20 line amended to include time
@@ -300,7 +301,7 @@ for i = 1:e
         %% actual calculation of force curve fit for one particular curve
         local_indentation = 15000E-9;
         local_CP_index = minCP_index + 1;
-    catch err %err is an MException struct
+    catch
         fprintf(' - Skipped. Does not appear to be AFM data\n');
         continue
     end
@@ -335,7 +336,8 @@ for i = 1:e
                     printwarninglater = 1; % this is just cosmetic for the command window
                 end
                 if local_indentation > beadradius/3 && crop_logical == 1
-                    fprintf('\nThe indentation was more than is permitted: data cropped.\nApprox Progress:       ');
+                    printwarninglater = 2; % this is just cosmetic for the command window
+                    %fprintf('\nThe indentation was more than is permitted: data cropped.\nApprox Progress:       ');
                     local_CP_index = GetHeaderValue(results,'contactpointindex');
                     contactpoint_now = rawdata{1,3}(local_CP_index);
                     [new_end,~]= find(rawdata{1,3} < (contactpoint_now-beadradius/3),1) ; 
@@ -372,14 +374,13 @@ for i = 1:e
                 if resolution > 0
                     if maxdefl > 3*resolution*1e-9
                         numberofdatapoints = length(rawdata{1,3});
-                        springConstant = GetHeaderValue(headerinfo,'springConstant');
                         % fit approach data to the best contactpoint
                         approachdata = [rawdata{1,3}(1:RESULTS(w,5)) rawdata{1,2}(1:RESULTS(w,5))];
                         [approachfit] = fitapproach (approachdata);
                         approachfitcoefficients = coeffvalues(approachfit);
 
                         newapproachdata = [approachdata(:,1)-rawdata{1,3}(RESULTS(w,5)),approachdata(:,2)-approachfitcoefficients(1,1)*approachdata(:,1)-approachfitcoefficients(1,2)];
-                        [approachfit] = fitapproach (newapproachdata);
+                        %[approachfit] = fitapproach (newapproachdata); % does this need another approachfitcoefficients = coeffvalues(approachfit); ? OR what is this line doing?
                         % fit forcecurve data to the best contactpoint
                         forcecurvedata = [rawdata{1,3}(RESULTS(w,5):numberofdatapoints,1) rawdata{1,2}(RESULTS(w,5):numberofdatapoints,1)];
 
@@ -402,11 +403,11 @@ for i = 1:e
                         end
                         if new_end2>=last_end2
                             w = 0;
-                            fprintf('\n Warning: The %gnN snip was too small to reduce the number of data points.     ',resolution);
+                            fprintf('\n    Warning: The %gnN snip was too small to reduce the number of data points.     ',resolution);
                         end
                         if new_end2 < 101
                             w = 0;
-                            fprintf('\n Warning: The %gnN snip was too big for this data file.     ',resolution);
+                            fprintf('\n    Warning: The %gnN snip was too big for this data file.     ',resolution);
                         end
                     else
                         w = 0; 
@@ -420,8 +421,10 @@ for i = 1:e
              fprintf(1,'\n%s\n',err.message);
          end
         try
-            if printwarninglater == 1
-                fprintf('\n Warning: The indentation was more than is permitted by the Hertz model   ');
+            if printwarninglater == 1   %put here for command window output aesthetics
+                fprintf('\n    Warning: The indentation was more than is permitted by the Hertz model   ');
+            elseif printwarninglater == 2
+                fprintf('\n    Note: Batchforce has cropped this data set, becasue the indentation was more than R/3');
             end
             fprintf(' - Done\n');
             filename = fullfile(PathName,[FileName{i}(1:end-4) '.mat']);
@@ -441,7 +444,7 @@ for i = 1:e
             [approachfit] = fitapproach (approachdata);
             approachfitcoefficients = coeffvalues(approachfit);
             newapproachdata = [approachdata(:,1)-rawdata{1,3}(contactpointindex),approachdata(:,2)-approachfitcoefficients(1,1)*approachdata(:,1)-approachfitcoefficients(1,2)];
-            [approachfit] = fitapproach (newapproachdata);
+            %[approachfit] = fitapproach (newapproachdata);
             % fit forcecurve data to the best contactpoint
             forcecurvedata = [rawdata{1,3}(contactpointindex:numberofdatapoints,1) rawdata{1,2}(contactpointindex:numberofdatapoints,1)];
             forcecurvedata = [(forcecurvedata(:,1)-rawdata{1,3}(contactpointindex)),forcecurvedata(:,2)-approachfitcoefficients(1,1)*forcecurvedata(:,1)-approachfitcoefficients(1,2)];
@@ -468,6 +471,7 @@ for i = 1:e
           %  (4/3).*RESULTS(1,3).*sqrt(beadradius.*x.^3)+fullcurve(contactpointindex,2);
           %  Idea for later: shift fit on Y axis so that it starts on CP,
           %  but maybe this should be done before fitting?
+          %  or maybe would give too much credence to the CP value
             
             plot(x,y,'m','LineWidth',3);
             clear res x y
@@ -549,11 +553,11 @@ for i = 1:e
                 indentationdata(1:first_positive,2*q+3) = ones(first_positive,1)* distance_to_cp;
             end
             if specialSelect == 5
-                newapproachdata = [0 0]
+                newapproachdata = [0 0];
                 for q = 1:length(binned_data(:,1))
-                    indentationdata(:,2*q+2) = indentationdata(:,2)-indentationdata(:,2*q+2)
+                    indentationdata(:,2*q+2) = indentationdata(:,2)-indentationdata(:,2*q+2);
                 end
-                indentationdata(:,2) = 0
+                indentationdata(:,2) = 0;
             end
         end
         %% draw the graph
@@ -597,11 +601,11 @@ for i = 1:e
 
         %% save the plot
         filename = [PathName FileName{i}];
-        r = length(filename);
-        timestampstart = r-11;
-        timestampend = r-4;
-        timestamp = filename(timestampstart:timestampend);
-        newtimestamp = [timestamp(1:2) ':' timestamp(4:5) ':' timestamp(7:8)];
+        %r = length(filename);
+        %timestampstart = r-11;
+        %timestampend = r-4;
+        %timestamp = filename(timestampstart:timestampend);
+        %newtimestamp = [timestamp(1:2) ':' timestamp(4:5) ':' timestamp(7:8)];
         imagename = filename(1:end-4);
         if specialSelect == 4
             imagename = [imagename '.png'];

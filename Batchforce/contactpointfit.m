@@ -12,8 +12,8 @@ function [contactpointquality] = contactpointfit(rawdata,numberofdatapoints,cont
 % will have a new default, while the others can be adjusted by commenting
 % out the lines that set them to 1. 
 % Tweaked Minpoints to 4%
-loop1res = round(numberofdatapoints()/1000,0);
-loop2res = round(numberofdatapoints()/1000,0);
+%loop1res = round(numberofdatapoints()/1000,0);
+%loop2res = round(numberofdatapoints()/1000,0);
 Minpoints = round(0.04*numberofdatapoints(),0);
 %Minpoints = 10;
 loop1res = 1;

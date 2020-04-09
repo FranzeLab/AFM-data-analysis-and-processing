@@ -9,7 +9,7 @@ q = 1;
 while (q==1)
     weighedHertzmodel = fittype({'real(x.^(3/2))'},'coefficients','Hertzfactor');
     weighedoptions = fitoptions('Method', 'LinearLeastSquares','Weights',Weights);
-    [weighedHertzfit,weighedHertzfitquality,weighedHertzfitoutput] = fit(fitdata(:,1),fitdata(:,2),weighedHertzmodel,weighedoptions);
+    [weighedHertzfit,weighedHertzfitquality,~] = fit(fitdata(:,1),fitdata(:,2),weighedHertzmodel,weighedoptions);
     w = feval(weighedHertzfit,fitdata(:,1));
     difference = (w-fitdata(:,2)).^2;
     meandiff = mean(difference);

@@ -6,7 +6,7 @@ function convert2csv
 
 %% Select the files to be converted
 clear
-[FileName,PathName,FilterIndex] = uigetfile({'*.mat','Matlab Results Files'},'Select file','C:\Users\alex_\Documents\MATLAB\comparison 2\correct indentation\data\less than\','MultiSelect','on');
+[FileName,PathName,~] = uigetfile({'*.mat','Matlab Results Files'},'Select file','C:\Users\alex_\Documents\MATLAB\comparison 2\correct indentation\data\less than\','MultiSelect','on');
 
 % this iscell check is required, because if only one file is chosen it is not
 % put into a field, but FileName is required to be in a field later on.
@@ -15,7 +15,7 @@ if (q == 0)
     FileName = {FileName};
 end
 %% iteration over all files
-[w,e] =  size(FileName); %Filename is a field of 1 x <number of files>, so here w = 1 and e = number of files
+[~,e] =  size(FileName); %Filename is a field of 1 x <number of files>, so here w = 1 and e = number of files
 for i = 1:e 
     filename = strcat(FileName(i));
     nameroot = erase(filename,'.mat');

@@ -1,7 +1,7 @@
 function [approachfit, approachfitquality] = fitapproach (approachdata)
 % fits the approachline currently linear
 q=1;
-while (q==1);
+while (q==1)
 approachfit = fittype({'x','1'},'coefficients',{'a1','a2'});
     options = fitoptions('Method','LinearLeastSquares');
     [approachfit, approachfitquality] = fit(approachdata(:,1),approachdata(:,2),approachfit,options);
