@@ -276,7 +276,6 @@ for i = 1:e
         rawdata = CleanData(rawdata, vDefl, mHeight, time); % JB 13/01/20 line amended to include time
 
         % log value of variables vDefl and mHeight
-    %    name = fullfile(PathName,'Log_vDefl_mHeight_values.txt');
         name = fullfile(PathName,'Log_vDefl_mHeight_values.log');
         variables = strjoin({'vDefl', num2str(vDefl), 'mHeight', num2str(mHeight), 'seriesTime', num2str(time)},'\t'); % JB 13/01/20 line amended to include time
         %% AMENDMENTS JULIA 13/01/20 END
