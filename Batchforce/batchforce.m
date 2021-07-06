@@ -1,8 +1,6 @@
 
 function batchforce(varargin)
 
-%% Work in progress: make a version of batchforce that enables snipping of 
-%% setpoint
 
 %% batchforce analyzes a batch of force curves obtained with a colloidal
 %% probe. The model used is the Hertz-model (assuming a paraboloid indenter
@@ -268,7 +266,7 @@ for i = 1:e
     
     %% AMENDMENTS JULIA 13/01/20 START
     %% Read the force curve data and cut of 'bad' start and end
-    fprintf('temp  %s (%d of %d) ', FileName{1,i},filnum, e);
+    fprintf('%s (%d of %d) ', FileName{1,i},filnum, e);
     filnum = filnum +1;
     try
         [rawdata,headerinfo] = Readfile(PathName,FileName(i));
@@ -315,6 +313,11 @@ for i = 1:e
             new_end2 = length(rawdata{1,1});
             origrawdata = rawdata;
             printwarninglater = 0;
+            %minCP_index < local_CP_index
+            %w > 0
+            %mod > 1
+            %local_CP_index < length(rawdata{1,1})
+            %length(rawdata{1,1})
             while (minCP_index < local_CP_index) && w > 0 && mod > 1 && local_CP_index < length(rawdata{1,1})
               %  local_CP_index
               %  length(rawdata{1,1}) 
@@ -380,7 +383,7 @@ for i = 1:e
                         approachfitcoefficients = coeffvalues(approachfit);
 
                         newapproachdata = [approachdata(:,1)-rawdata{1,3}(RESULTS(w,5)),approachdata(:,2)-approachfitcoefficients(1,1)*approachdata(:,1)-approachfitcoefficients(1,2)];
-                        %[approachfit] = fitapproach (newapproachdata); % does this need another approachfitcoefficients = coeffvalues(approachfit); ? OR what is this line doing?
+                        [approachfit] = fitapproach (newapproachdata); % does this need another approachfitcoefficients = coeffvalues(approachfit); ? OR what is this line doing?
                         % fit forcecurve data to the best contactpoint
                         forcecurvedata = [rawdata{1,3}(RESULTS(w,5):numberofdatapoints,1) rawdata{1,2}(RESULTS(w,5):numberofdatapoints,1)];
 
@@ -421,12 +424,12 @@ for i = 1:e
              fprintf(1,'\n%s\n',err.message);
          end
         try
+            fprintf('-> K = %f Pa\n',RESULTS(1,3));
             if printwarninglater == 1   %put here for command window output aesthetics
-                fprintf('\n    Warning: The indentation was more than is permitted by the Hertz model   ');
+                fprintf('%s: the indentation was more than is permitted by the Hertz model\n', FileName{1,i});
             elseif printwarninglater == 2
-                fprintf('\n    Note: Batchforce has cropped this data set, becasue the indentation was more than R/3');
+                fprintf('%s: the indentation was more than R/3, data cropped\n', FileName{1,i});
             end
-            fprintf(' - Done\n');
             filename = fullfile(PathName,[FileName{i}(1:end-4) '.mat']);
 
             if 1 == exist('RESULTS', 'var')
@@ -444,7 +447,7 @@ for i = 1:e
             [approachfit] = fitapproach (approachdata);
             approachfitcoefficients = coeffvalues(approachfit);
             newapproachdata = [approachdata(:,1)-rawdata{1,3}(contactpointindex),approachdata(:,2)-approachfitcoefficients(1,1)*approachdata(:,1)-approachfitcoefficients(1,2)];
-            %[approachfit] = fitapproach (newapproachdata);
+            [approachfit] = fitapproach (newapproachdata);
             % fit forcecurve data to the best contactpoint
             forcecurvedata = [rawdata{1,3}(contactpointindex:numberofdatapoints,1) rawdata{1,2}(contactpointindex:numberofdatapoints,1)];
             forcecurvedata = [(forcecurvedata(:,1)-rawdata{1,3}(contactpointindex)),forcecurvedata(:,2)-approachfitcoefficients(1,1)*forcecurvedata(:,1)-approachfitcoefficients(1,2)];
