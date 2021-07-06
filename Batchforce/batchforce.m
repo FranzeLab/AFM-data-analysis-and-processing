@@ -313,14 +313,7 @@ for i = 1:e
             new_end2 = length(rawdata{1,1});
             origrawdata = rawdata;
             printwarninglater = 0;
-            %minCP_index < local_CP_index
-            %w > 0
-            %mod > 1
-            %local_CP_index < length(rawdata{1,1})
-            %length(rawdata{1,1})
             while (minCP_index < local_CP_index) && w > 0 && mod > 1 && local_CP_index < length(rawdata{1,1})
-              %  local_CP_index
-              %  length(rawdata{1,1}) 
                 results = forcecurveanalysis(rawdata,headerinfo,userInput,minCP_index,w,local_CP_index);
                 local_indentation = GetHeaderValue(results,'indentation');
                 mod = GetHeaderValue(results,'modulus');
