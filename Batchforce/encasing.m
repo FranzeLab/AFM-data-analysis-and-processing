@@ -14,7 +14,7 @@ clear variables
 close all
 %% Let user choose which folder to read
 uiwait(msgbox(sprintf("Select the overarching folder you want to analyse.\n\n All 'files and labfile' folders inside this folder will be searched for force-save-***.txt files for analysis.")))
-PathName_big = uigetdir('/Users/julia/OneDrive - University Of Cambridge/Julia/Dokumente/Studium/Cambridge/PhD/PhD/PhD Franze lab/Data and results/AFM/WT measurements/', 'Select the overarching section folder (#XX_XX)');
+PathName_big = uigetdir('D:\Julia\data\TO DO', 'Select the overarching section folder (#XX_XX)');
 bli = dir(fullfile(PathName_big, '**', 'files and labfile/'));
 bla = {bli.folder};
 PathName = unique(bla);
