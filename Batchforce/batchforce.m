@@ -1,5 +1,5 @@
 
-function batchforce_cell_on_soft(varargin)
+function batchforce(varargin)
 
 %% batchforce analyzes a batch of force curves obtained with a colloidal
 %% probe. The model used is the Hertz-model (assuming a paraboloid indenter
