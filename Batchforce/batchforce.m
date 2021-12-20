@@ -1,6 +1,5 @@
 
-function batchforce(varargin)
-
+function batchforce_cell_on_soft(varargin)
 
 %% batchforce analyzes a batch of force curves obtained with a colloidal
 %% probe. The model used is the Hertz-model (assuming a paraboloid indenter
@@ -44,6 +43,9 @@ function batchforce(varargin)
 % of 10 if you want only 5 lines in your results file (and much 
 % faster analysis). '10 5' means the data will be snipped by 10nN 4 times,
 % so that the total number of lines is 5.
+%
+% December 2021 added option 6 for measuring cells on soft substrates,
+% currently prompts for inputted Esubstrate.
 
 
 
@@ -149,7 +151,7 @@ else
     error('no valid input')
 end
 if nargin ~= ExpectedArgs
-    specialSelect = input('Select type of analysis:\n(1)  Complete analysis with tabulated output\n(2)  Specific output for one Indentation\n(3)  Specific output for one Force\n(4)  Check fits\n(5)  Residuals\n>>>');
+    specialSelect = input('Select type of analysis:\n(1)  Complete analysis with tabulated output\n(2)  Specific output for one Indentation\n(3)  Specific output for one Force\n(4)  Check fits\n(5)  Residuals\n(6)  Same as (1), but for cell on soft substrate\n>>>');
 end
 log_userinput{1,3} = num2str(specialSelect);
 
@@ -177,7 +179,7 @@ elseif specialSelect == 2
     else
         detailedRun = 1;
     end
-elseif specialSelect == 1
+elseif specialSelect == 1 || 6
     if nargin ~= ExpectedArgs
         crop = input('How should batchforce handle indentations that are greater than R/3? \nTo warn and continue enter w\nTo crop and re-fit enter c\n>>>','s');
     end
@@ -201,6 +203,10 @@ elseif specialSelect == 1
     end
     if length(resolution) ~= 1
         error('no valid input')
+    end
+    if specialSelect == 6
+        Esubst = input("What is the Young's modulus of the substrate in Pa (e.g. 1e3)?  ",'s');
+        Esubst = str2num(Esubst);
     end
    
         
@@ -304,7 +310,10 @@ for i = 1:e
     end
     
         
-    if specialSelect == 1
+    if specialSelect == 1 || 6
+        %Esubst = 2e12; % temporary value: should become an argument, or maybe read from a file 
+        %fprintf('(%s %d %s) ', 'Entered substrate stiffness:',Esubst, 'Pa');
+
         w=1;
         mod = 2;
          try
@@ -313,7 +322,11 @@ for i = 1:e
             origrawdata = rawdata;
             printwarninglater = 0;
             while (minCP_index < local_CP_index) && w > 0 && mod > 1 && local_CP_index < length(rawdata{1,1})
-                results = forcecurveanalysis(rawdata,headerinfo,userInput,minCP_index,w,local_CP_index);
+                if specialSelect == 1
+                    results = forcecurveanalysis(rawdata,headerinfo,userInput,minCP_index,w,local_CP_index);
+                else
+                    results = forcecurveanalysis_cell_on_soft(rawdata,headerinfo,userInput,minCP_index,w,local_CP_index,Esubst);
+                end
                 local_indentation = GetHeaderValue(results,'indentation');
                 mod = GetHeaderValue(results,'modulus');
                 if (local_indentation < indentationInput)
@@ -337,7 +350,11 @@ for i = 1:e
                     contactpoint_now = rawdata{1,3}(local_CP_index);
                     [new_end,~]= find(rawdata{1,3} < (contactpoint_now-beadradius/3),1) ; 
                     rawdata = {rawdata{1,1}(1:end) rawdata{1,2}(1:new_end) rawdata{1,3}(1:new_end)};
-                    results = forcecurveanalysis(rawdata,headerinfo,userInput,minCP_index,0,local_CP_index);
+                    if specialSelect == 1
+                        results = forcecurveanalysis(rawdata,headerinfo,userInput,minCP_index,w,local_CP_index);
+                    else
+                        results = forcecurveanalysis_cell_on_soft(rawdata,headerinfo,userInput,minCP_index,w,local_CP_index,Esubst);
+                    end
                     local_indentation = GetHeaderValue(results,'indentation');
                     local_CP_index = GetHeaderValue(results,'contactpointindex');
                     crop_logical = 0;
@@ -445,6 +462,13 @@ for i = 1:e
             forcecurvedata = [(forcecurvedata(:,1)-rawdata{1,3}(contactpointindex)),forcecurvedata(:,2)-approachfitcoefficients(1,1)*forcecurvedata(:,1)-approachfitcoefficients(1,2)];
             indentationdata = [forcecurvedata(:,1) + forcecurvedata(:,2)/springConstant, forcecurvedata(:,2)]; %akw48: Corrected indentation calculation
             indentationdata(:,1) = (-1)*indentationdata(:,1);
+             %% begin insert for correction for soft substrate (only used if specialSelect is 6
+             if specialSelect == 6
+                 c = 9 / (4 * pi * beadradius * Esubst);
+                 indentationdata(:,1) = indentationdata(:,1) - c * indentationdata(:,2);
+             end
+             %% end insert for correction for soft substrate
+
             newapproachdata(:,1) = (-1).*newapproachdata(:,1);
             
             fullcurve = [newapproachdata;indentationdata];
