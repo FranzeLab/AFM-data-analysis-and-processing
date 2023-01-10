@@ -10,8 +10,10 @@
 % Alex Winkel 7/4/20 - It now prompts for resolution so that the user can
 % choose to do force snipping
 
-clear variables
+clearvars
 close all
+cd D:\git\AFM-data-analysis-and-processing\Batchforce
+
 %% Let user choose which folder to read
 uiwait(msgbox(sprintf("Select the overarching folder you want to analyse.\n\n All 'files and labfile' folders inside this folder will be searched for force-save-***.txt files for analysis.")))
 PathName_big = uigetdir('D:\Julia\data\TO DO', 'Select the overarching section folder (#XX_XX)');

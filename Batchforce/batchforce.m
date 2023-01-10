@@ -325,9 +325,6 @@ for i = 1:e
     
         
     if specialSelect == 1 || 6
-        %Esubst = 2e12; % temporary value: should become an argument, or maybe read from a file 
-        %fprintf('(%s %d %s) ', 'Entered substrate stiffness:',Esubst, 'Pa');
-
         w=1;
         mod = 2;
          try
