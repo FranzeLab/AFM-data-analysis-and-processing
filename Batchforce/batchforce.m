@@ -46,7 +46,8 @@ function batchforce(varargin)
 %
 % December 2021 added option 6 for measuring cells on soft substrates,
 % currently prompts for inputted Esubstrate.
-
+% January 2023: added filtering of curves if the range of values in
+% deflection is less than 70% of the setpoint. 
 
 
 %% AKW: use input args if present and correct
@@ -280,6 +281,19 @@ for i = 1:e
         [time, ~, ~] = FindColumnsNeeded(headerinfo, 'seriesTime', 'measuredHeight'); % JB 13/01/20 line added to include time
         rawdata{vDefl} = smooth(rawdata{vDefl},10); % inserted by David 14/03/13, altered by Julia 23/10/18 to accommodate new variable
         rawdata = CleanData(rawdata, vDefl, mHeight, time); % JB 13/01/20 line amended to include time
+%% Start: section for skipping files if range of Vdefl is less than 70% of setpoint
+        frange = range(cell2mat(rawdata(2))); 
+        spv = GetHeaderValue(headerinfo,'relative-setpoint');  
+        sens = GetHeaderValue(headerinfo,'sensitivity');  
+        springConstant = GetHeaderValue(headerinfo,'springConstant'); 
+        spf = spv*sens*springConstant;
+        acceptable_ratio = 0.7; 
+        if frange/spf < acceptable_ratio  
+            fprintf('Warning - Skipped because the range in force values is less than %i%% of setpoint.\n',round(acceptable_ratio*100));
+            continue      
+        end    
+        clear frange spv sens springConstant acceptable_ratio;
+%% End: section for skipping files if range of Vdefl is less than 70% of setpoint
 
         % log value of variables vDefl and mHeight
         name = fullfile(PathName,'Log_vDefl_mHeight_values.log');
