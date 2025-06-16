@@ -1,1 +1,7 @@
 This folder contains the following files:
+PSM_fluiditySLM.m - the main script that opens and processes the txt exports from the JPK Data Processing software
+polynomial_step_model.m - function called by PSM_fluiditySLM.m to fit a plynomial to the force ramp
+polynomial_step_function.m - the equation used in polynomial_step_model.m
+SLM_model.m - function called by PSM_fluiditySLM.m to determine viscosity
+SLM.m - the equation used in SLM_model.m
+
